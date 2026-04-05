@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Live Scoring — {{ event.title }}</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="stylesheet" href="/static/css/scoring.css"/>
+</head>
+<body>
+<div id="app">
+
+  <!-- ──── SETUP SCREEN ──── -->
+  <div id="screen-setup" class="screen active">
+    <div class="header">
+      <div class="header-back"><a href="/admin/events/{{ event.id }}" style="color:var(--muted);text-decoration:none;">← Back</a></div>
+      <div class="header-icon">🏏</div>
+      <h1>{{ event.title }}</h1>
+      <p>{{ event.team1 }} vs {{ event.team2 }} &nbsp;·&nbsp; {{ event.total_overs }} overs</p>
+    </div>
+    <!-- Share scoreboard link -->
+    <div style="background:#1e3a5f;border-radius:10px;padding:12px 16px;margin:12px 16px 0;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;">
+      <span style="color:#93c5fd;">📺 Public Scoreboard URL:</span>
+      <a href="/scoreboard/event/{{ event.id }}" target="_blank"
+         style="color:#60a5fa;word-break:break-all;text-decoration:underline;">
+        /scoreboard/event/{{ event.id }}
+      </a>
+    </div>
+    <div class="card">
+      <h2>👥 Enter Players</h2>
+      <div class="form-group">
+        <label>{{ event.team1 }} Players <span class="hint">(one per line)</span></label>
+        <textarea id="team1-players" rows="6" placeholder="Player 1&#10;Player 2&#10;..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>{{ event.team2 }} Players <span class="hint">(one per line)</span></label>
+        <textarea id="team2-players" rows="6" placeholder="Player 1&#10;Player 2&#10;..."></textarea>
+      </div>
+      <button class="btn-primary btn-full" onclick="goToToss()">Proceed to Toss →</button>
+    </div>
+  </div>
+
+  <!-- ──── TOSS SCREEN ──── -->
+  <div id="screen-toss" class="screen">
+    <div class="header">
+      <div class="header-icon">🪙</div>
+      <h1>Toss</h1>
+    </div>
+    <div class="card">
+      <h2>Who won the toss?</h2>
+      <div id="toss-options" class="radio-group"></div>
+      <div id="bat-choice-section" style="display:none;margin-top:20px;">
+        <h2>Elected to?</h2>
+        <div id="bat-choice-options" class="radio-group"></div>
+      </div>
+      <button class="btn-primary btn-full" style="margin-top:20px;" onclick="startMatch()">Start Match 🏏</button>
+    </div>
+  </div>
+
+  <!-- ──── BATSMEN SCREEN ──── -->
+  <div id="screen-batsmen" class="screen">
+    <div class="header small-header">
+      <h1>🏏 Opening Players</h1>
+      <p id="batting-team-label"></p>
+    </div>
+    <div class="card">
+      <div class="form-group">
+        <label>Striker (on strike)</label>
+        <select id="select-striker"></select>
+      </div>
+      <div class="form-group">
+        <label>Non-Striker</label>
+        <select id="select-non-striker"></select>
+      </div>
+      <div class="form-group">
+        <label>Opening Bowler</label>
+        <select id="select-bowler"></select>
+      </div>
+      <button class="btn-primary btn-full" onclick="confirmBatsmen()">Let's Play! ⚾</button>
+    </div>
+  </div>
+
+  <!-- ──── SCORING SCREEN ──── -->
+  <div id="screen-scoring" class="screen">
+    <div class="score-bar">
+      <div class="score-left">
+        <div id="batting-team-name" class="team-name">—</div>
+        <div id="score-display" class="score-big">0/0</div>
+        <div id="overs-display" class="overs-text">Overs: 0.0</div>
+      </div>
+      <div class="score-right" id="target-box" style="display:none">
+        <div class="target-label">Target</div>
+        <div id="target-display" class="target-num">—</div>
+        <div id="rrr-display" class="rrr-text"></div>
+      </div>
+      <div class="score-right" id="crr-box">
+        <div class="target-label">CRR</div>
+        <div id="crr-display" class="target-num">0.00</div>
+      </div>
+    </div>
+    <div class="batsmen-bar">
+      <div class="batsman-item striker">
+        <span class="bat-icon">🏏</span>
+        <span id="striker-name">—</span>
+        <span id="striker-score" class="bat-score">0(0)</span>
+      </div>
+      <div class="batsman-item">
+        <span class="bat-icon">•</span>
+        <span id="nonstriker-name">—</span>
+        <span id="nonstriker-score" class="bat-score">0(0)</span>
+      </div>
+      <div class="batsman-item bowler-item">
+        <span class="bat-icon">⚾</span>
+        <span id="bowler-name-display">—</span>
+        <span id="bowler-stats-display" class="bat-score">0-0-0-0</span>
+      </div>
+    </div>
+    <div class="over-balls">
+      <span class="over-label">This Over:</span>
+      <span id="ball-dots"></span>
+    </div>
+    <div class="run-buttons">
+      <button class="run-btn" onclick="addRun(0)">0</button>
+      <button class="run-btn" onclick="addRun(1)">1</button>
+      <button class="run-btn" onclick="addRun(2)">2</button>
+      <button class="run-btn" onclick="addRun(3)">3</button>
+      <button class="run-btn four" onclick="addRun(4)">4</button>
+      <button class="run-btn six" onclick="addRun(6)">6</button>
+    </div>
+    <div class="extras-row">
+      <button class="extra-btn" onclick="showExtras()">Extras</button>
+      <button class="extra-btn wicket" onclick="showWicket()">WICKET 🔴</button>
+      <button class="extra-btn" onclick="showScoreboard()">Scorecard 📋</button>
+    </div>
+  </div>
+
+  <!-- ──── RESULT SCREEN ──── -->
+  <div id="screen-result" class="screen">
+    <div class="header"><div class="header-icon">🏆</div><h1>Match Over!</h1></div>
+    <div class="card text-center">
+      <div class="trophy">🏆</div>
+      <div id="result-text" class="result-text"></div>
+      <button class="btn-primary btn-full" style="margin-top:20px;" onclick="showScoreboard()">View Scorecard 📋</button>
+      <a href="/admin/events/{{ event.id }}" class="btn-secondary btn-full" style="margin-top:10px;display:block;">← Back to Event</a>
+    </div>
+  </div>
+
+  <!-- ──── SCORECARD SCREEN ──── -->
+  <div id="screen-scorecard" class="screen">
+    <div class="header small-header">
+      <h1>📋 Scorecard</h1>
+      <div id="sc-match-info" style="font-size:13px;color:var(--muted);margin-top:4px;"></div>
+    </div>
+    <div id="scorecard-content"></div>
+    <div style="padding:16px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-secondary" onclick="goBack()">← Back</button>
+      <a href="/admin/events/{{ event.id }}" class="btn-secondary" style="flex:1;text-align:center;">Event Page</a>
+      <a href="/scoreboard/event/{{ event.id }}" target="_blank" class="btn-primary" style="flex:1;text-align:center;">📺 Public Scoreboard ↗</a>
+    </div>
+  </div>
+
+  <!-- ──── EXTRAS MODAL ──── -->
+  <div id="modal-extras" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h2>Extras</h2>
+      <div class="radio-group">
+        <label class="radio-item"><input type="radio" name="extra-type" value="wide" checked/> Wide</label>
+        <label class="radio-item"><input type="radio" name="extra-type" value="no_ball"/> No Ball</label>
+        <label class="radio-item"><input type="radio" name="extra-type" value="bye"/> Bye</label>
+        <label class="radio-item"><input type="radio" name="extra-type" value="leg_bye"/> Leg Bye</label>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label>Runs off this delivery</label>
+        <div class="run-buttons small">
+          <button class="run-btn active-run" onclick="setExtraRuns(0,this)">0</button>
+          <button class="run-btn" onclick="setExtraRuns(1,this)">1</button>
+          <button class="run-btn" onclick="setExtraRuns(2,this)">2</button>
+          <button class="run-btn" onclick="setExtraRuns(3,this)">3</button>
+          <button class="run-btn four" onclick="setExtraRuns(4,this)">4</button>
+        </div>
+        <input type="hidden" id="extra-runs-val" value="0"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn-secondary" onclick="closeModal('modal-extras')">Cancel</button>
+        <button class="btn-primary" onclick="confirmExtras()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──── WICKET MODAL ──── -->
+  <div id="modal-wicket" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h2>🔴 Wicket!</h2>
+      <div class="form-group">
+        <label>Wicket Type</label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="wicket-type" value="bowled" checked/> Bowled</label>
+          <label class="radio-item"><input type="radio" name="wicket-type" value="caught"/> Caught</label>
+          <label class="radio-item"><input type="radio" name="wicket-type" value="lbw"/> LBW</label>
+          <label class="radio-item"><input type="radio" name="wicket-type" value="run_out"/> Run Out</label>
+          <label class="radio-item"><input type="radio" name="wicket-type" value="stumped"/> Stumped</label>
+          <label class="radio-item"><input type="radio" name="wicket-type" value="hit_wicket"/> Hit Wicket</label>
+        </div>
+      </div>
+      <div class="form-group" id="fielder-group">
+        <label id="fielder-label">Fielder (for caught/stumped)</label>
+        <input type="text" id="fielder-input" placeholder="Fielder name" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')" title="Name must contain letters only"/>
+      </div>
+      <div class="form-group" id="run-out-group" style="display:none">
+        <label>Who got Run Out?</label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="run-out-who" value="striker" checked/> Striker</label>
+          <label class="radio-item"><input type="radio" name="run-out-who" value="non_striker"/> Non-Striker</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Runs on this delivery</label>
+        <div class="run-buttons small">
+          <button class="run-btn active-run" onclick="setWicketRuns(0,this)">0</button>
+          <button class="run-btn" onclick="setWicketRuns(1,this)">1</button>
+          <button class="run-btn" onclick="setWicketRuns(2,this)">2</button>
+          <button class="run-btn" onclick="setWicketRuns(3,this)">3</button>
+        </div>
+        <input type="hidden" id="wicket-runs-val" value="0"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn-secondary" onclick="closeModal('modal-wicket')">Cancel</button>
+        <button class="btn-primary" onclick="confirmWicket()">Confirm Wicket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──── NEW BATSMAN MODAL ──── -->
+  <div id="modal-new-batsman" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h2>🏏 New Batsman</h2>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:12px;">Select next batsman:</p>
+      <div id="new-batsman-list" class="player-list"></div>
+      <button class="btn-primary btn-full" style="margin-top:12px;" onclick="confirmNewBatsman()">Send In</button>
+    </div>
+  </div>
+
+  <!-- ──── NEW BOWLER MODAL ──── -->
+  <div id="modal-new-bowler" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h2>⚾ New Over — Select Bowler</h2>
+      <div id="new-bowler-list" class="player-list"></div>
+      <button class="btn-primary btn-full" style="margin-top:12px;" onclick="confirmNewBowler()">Confirm</button>
+    </div>
+  </div>
+
+  <!-- ──── INNINGS BREAK MODAL ──── -->
+  <div id="modal-innings-break" class="modal-overlay" style="display:none">
+    <div class="modal text-center">
+      <div style="font-size:48px">🏏</div>
+      <h2>Innings Break!</h2>
+      <div id="innings-break-msg" class="result-text"></div>
+      <div id="innings-break-sub" style="margin-top:8px;color:var(--muted);font-size:14px;"></div>
+      <button class="btn-primary btn-full" style="margin-top:20px" onclick="startSecondInnings()">Start 2nd Innings</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const EVENT_ID = {{ event.id }};
+  const CRICKET_MATCH_ID = {{ event.cricket_match_id or 'null' }};
+  const TEAM1 = {{ event.team1 | tojson }};
+  const TEAM2 = {{ event.team2 | tojson }};
+  const TOTAL_OVERS = {{ event.total_overs or 6 }};
+</script>
+<script src="/static/js/score.js"></script>
+</body>
+</html>

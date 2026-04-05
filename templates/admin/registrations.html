@@ -1,0 +1,76 @@
+{% extends "admin/base.html" %}
+{% block title %}Registrations{% endblock %}
+{% block page_title %}📋 Registrations{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin" class="btn btn-secondary btn-sm">← Dashboard</a>
+  <span style="font-size:13px;color:var(--muted2);padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;">
+    {{ registrations|length }} total
+  </span>
+{% endblock %}
+{% block content %}
+
+<div class="dash-section" style="border-radius:14px;overflow:hidden;border:1px solid var(--border);">
+  <div class="ds-head">
+    <h3>📋 All Event Registrations</h3>
+  </div>
+  {% if registrations %}
+  <div style="overflow-x:auto;">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Viewer</th>
+        <th>Event</th>
+        <th>Sport</th>
+        <th>Team Pref</th>
+        <th>Position</th>
+        <th>Registered</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in registrations %}
+    <tr>
+      <td>
+        <div class="user-cell">
+          <div class="user-avatar-sm">{{ r.username[0].upper() if r.username else '?' }}</div>
+          <div>
+            <div style="font-weight:700;font-size:13px;">{{ r.full_name or r.username }}</div>
+            <div class="muted-text">{{ r.email }}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <a href="/admin/events/{{ r.event_id }}" class="table-link">{{ r.event_title }}</a>
+        <div class="muted-text">{{ r.team1 }} vs {{ r.team2 }}</div>
+      </td>
+      <td>
+        <span style="font-size:16px;">{{ r.sport_icon or '' }}</span>
+        <span class="muted-text">{{ r.sport_name or '—' }}</span>
+      </td>
+      <td class="muted-cell">{{ r.team_preference or '—' }}</td>
+      <td class="muted-cell">{{ r.position or '—' }}</td>
+      <td class="muted-cell">{{ r.registered_at[:10] if r.registered_at else '—' }}</td>
+      <td>
+        <form method="POST" action="/admin/registrations/{{ r.id }}/status" style="display:flex;gap:6px;align-items:center;">
+          <select name="status" class="filter-select-sm">
+            <option value="pending"  {% if r.status=='pending'  %}selected{% endif %}>⏳ Pending</option>
+            <option value="approved" {% if r.status=='approved' %}selected{% endif %}>✅ Approved</option>
+            <option value="rejected" {% if r.status=='rejected' %}selected{% endif %}>❌ Rejected</option>
+          </select>
+          <button type="submit" class="tbl-btn tbl-btn-green" title="Save">✓</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div style="padding:48px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">📋</div>
+    <div style="font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px;">No registrations yet</div>
+    <div style="font-size:13px;color:var(--muted2);">Registrations will appear here once viewers sign up for events.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

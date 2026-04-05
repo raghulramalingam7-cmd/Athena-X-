@@ -1,0 +1,906 @@
+{% extends "admin/base.html" %}
+{% block title %}🏸 Badminton — {{ event.title }}{% endblock %}
+{% block page_title %}🏸 {{ event.title }}{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/events/{{ event.id }}" class="btn btn-secondary btn-sm">← Back</a>
+  
+{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --t1: #00c896; --t1-light: rgba(0,200,150,0.12); --t1-border: rgba(0,200,150,0.35);
+  --t2: #f97316; --t2-light: rgba(249,115,22,0.12); --t2-border: rgba(249,115,22,0.35);
+}
+.bd-wrapper { max-width:1100px; display:flex; flex-direction:column; gap:16px; }
+
+/* SETUP */
+.setup-card { max-width:680px; background:var(--bg2); border-radius:16px; padding:32px; }
+
+/* SCOREBOARD CARD */
+.bd-scoreboard {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 28px 32px; position:relative; overflow:hidden;
+}
+.bd-scoreboard::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse at 20% 50%, rgba(0,200,150,0.06) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 50%, rgba(249,115,22,0.06) 0%, transparent 60%);
+}
+.bd-top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.bd-match-info { font-size:12px; color:rgba(255,255,255,0.35); font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.bd-live-badge { background:#ef4444; color:white; border-radius:20px; padding:3px 12px; font-size:11px; font-weight:800; letter-spacing:1.5px; animation:pulse-red 1.5s ease-in-out infinite; }
+.bd-final-badge { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.5); border-radius:20px; padding:3px 12px; font-size:11px; font-weight:700; letter-spacing:1.5px; }
+@keyframes pulse-red { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }
+
+.bd-score-row { display:grid; grid-template-columns:1fr auto 1fr; gap:20px; align-items:center; }
+.bd-team-block { text-align:center; }
+.bd-team-name { font-size:13px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:4px; }
+.bd-team-name.t1 { color:var(--t1); }
+.bd-team-name.t2 { color:var(--t2); }
+.bd-team-players { font-size:11px; color:rgba(255,255,255,0.35); margin-bottom:10px; min-height:16px; }
+.bd-games-row { display:flex; gap:6px; justify-content:center; margin-bottom:12px; }
+.bd-game-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:2px solid rgba(255,255,255,0.08); }
+.bd-game-dot.won-t1 { background:var(--t1); border-color:var(--t1); color:white; }
+.bd-game-dot.won-t2 { background:var(--t2); border-color:var(--t2); color:white; }
+.bd-game-dot.empty { background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.2); }
+.bd-current-score { font-size:80px; font-weight:900; line-height:1; }
+.bd-current-score.t1 { color:var(--t1); text-shadow:0 0 40px rgba(0,200,150,0.3); }
+.bd-current-score.t2 { color:var(--t2); text-shadow:0 0 40px rgba(249,115,22,0.3); }
+.bd-server-indicator { font-size:11px; font-weight:700; letter-spacing:1px; margin-top:6px; height:20px; color:rgba(255,255,255,0.2); }
+.bd-server-indicator.serving { color:#10b981; }
+
+.bd-center-block { text-align:center; min-width:120px; }
+.bd-game-label { font-size:10px; color:rgba(255,255,255,0.25); font-weight:700; letter-spacing:2px; margin-bottom:4px; }
+.bd-game-number { font-size:28px; font-weight:900; color:rgba(255,255,255,0.7); margin-bottom:4px; }
+.bd-vs { font-size:14px; color:rgba(255,255,255,0.25); font-weight:700; margin:4px 0; }
+.bd-status-badges { display:flex; flex-direction:column; gap:4px; align-items:center; margin-top:4px; }
+.bd-deuce-badge { background:#eab308; color:#000; border-radius:12px; padding:2px 10px; font-size:11px; font-weight:800; }
+.bd-mp-badge { background:linear-gradient(90deg,#00c896,#00d2d3); color:white; border-radius:12px; padding:2px 10px; font-size:11px; font-weight:800; animation:glow-mp 1s ease-in-out infinite alternate; }
+@keyframes glow-mp { from{box-shadow:0 0 5px rgba(0,200,150,0.5)} to{box-shadow:0 0 18px rgba(0,200,150,0.9)} }
+.bd-rally-count { font-size:10px; color:rgba(255,255,255,0.25); margin-top:6px; }
+
+.bd-set-history { display:flex; gap:8px; justify-content:center; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; }
+.bd-set-pill { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:4px 14px; font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); display:flex; gap:8px; align-items:center; }
+.bd-set-pill.active { border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.8); }
+.sc-t1 { color:var(--t1); }
+.sc-t2 { color:var(--t2); }
+.sc-dim { color:rgba(255,255,255,0.4); }
+
+/* CONTROLS */
+.bd-controls-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.bd-control-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:20px; }
+.bd-control-card h4 { font-size:12px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; }
+
+.bd-score-panel { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.bd-score-half { display:flex; flex-direction:column; gap:8px; }
+.bd-team-label-score { font-size:13px; font-weight:800; padding:0 4px; }
+.bd-team-label-score.t1 { color:var(--t1); }
+.bd-team-label-score.t2 { color:var(--t2); }
+.bd-point-btn { width:100%; padding:18px 10px; font-size:18px; font-weight:900; border:none; border-radius:12px; cursor:pointer; transition:all 0.1s; letter-spacing:1px; }
+.bd-point-btn.t1 { background:var(--t1-light); border:2px solid var(--t1-border); color:var(--t1); }
+.bd-point-btn.t1:hover { background:rgba(0,200,150,0.22); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,200,150,0.3); }
+.bd-point-btn.t1:active { transform:translateY(1px); }
+.bd-point-btn.t2 { background:var(--t2-light); border:2px solid var(--t2-border); color:var(--t2); }
+.bd-point-btn.t2:hover { background:rgba(249,115,22,0.22); transform:translateY(-1px); box-shadow:0 4px 12px rgba(249,115,22,0.3); }
+.bd-point-btn.t2:active { transform:translateY(1px); }
+
+.shot-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-top:8px; }
+.shot-btn { padding:8px 4px; border-radius:8px; border:1.5px solid var(--border); background:var(--bg3); color:var(--muted2); font-size:12px; font-weight:600; cursor:pointer; text-align:center; transition:all 0.15s; }
+.shot-btn.active { border-color:var(--accent); background:rgba(96,165,250,0.12); color:var(--accent); }
+
+.fault-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.fault-btn { padding:10px 8px; border-radius:10px; border:1.5px solid rgba(239,68,68,0.25); background:rgba(239,68,68,0.06); color:#ef4444; font-size:12px; font-weight:700; cursor:pointer; text-align:center; transition:all 0.15s; }
+.fault-btn:hover { background:rgba(239,68,68,0.14); border-color:#ef4444; }
+.ft-toggle { display:flex; gap:6px; margin-bottom:8px; }
+.ft-btn { flex:1; padding:7px; border-radius:8px; border:1.5px solid var(--border); background:var(--bg3); color:var(--muted2); font-size:12px; font-weight:700; cursor:pointer; transition:all 0.15s; text-align:center; }
+.ft-btn.active.t1 { border-color:var(--t1); background:var(--t1-light); color:var(--t1); }
+.ft-btn.active.t2 { border-color:var(--t2); background:var(--t2-light); color:var(--t2); }
+
+.bd-action-row { display:flex; gap:8px; }
+.bd-undo-btn { flex:1; padding:10px; border-radius:10px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.6); font-size:13px; font-weight:700; cursor:pointer; transition:all 0.15s; }
+.bd-undo-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); color:white; }
+.bd-srv-btn { color:#10b981; border-color:rgba(16,185,129,0.25); }
+.bd-srv-btn:hover { border-color:#10b981; }
+
+/* STATS */
+.bd-stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.bd-stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:16px; }
+.bd-stat-card h4 { font-size:12px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+
+.bd-player-stat-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.bd-player-stat-row:last-child { border-bottom:none; }
+.bd-psr-name { font-size:13px; color:var(--text); font-weight:600; }
+.bd-psr-pills { display:flex; gap:4px; flex-wrap:wrap; }
+.bd-stat-pill { padding:2px 7px; border-radius:10px; font-size:11px; font-weight:700; }
+.smash-pill { background:rgba(239,68,68,0.15); color:#ef4444; }
+.drop-pill { background:rgba(139,92,246,0.15); color:#8b5cf6; }
+.net-pill { background:rgba(16,185,129,0.15); color:#10b981; }
+.err-pill { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.4); }
+.fault-pill { background:rgba(234,179,8,0.15); color:#eab308; }
+
+.momentum-bar-outer { height:28px; border-radius:14px; background:rgba(255,255,255,0.05); overflow:hidden; display:flex; margin-bottom:8px; }
+.momentum-bar-t1 { background:linear-gradient(90deg,var(--t1),rgba(0,200,150,0.5)); transition:width 0.5s ease; }
+.momentum-bar-t2 { background:linear-gradient(270deg,var(--t2),rgba(249,115,22,0.5)); transition:width 0.5s ease; }
+.momentum-labels { display:flex; justify-content:space-between; font-size:11px; font-weight:700; }
+
+.streak-row { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+.streak-badge { padding:3px 10px; border-radius:10px; font-size:11px; font-weight:800; }
+.streak-badge.t1 { background:var(--t1-light); color:var(--t1); }
+.streak-badge.t2 { background:var(--t2-light); color:var(--t2); }
+.streak-badge.none { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.25); }
+
+.court-display { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; }
+.court-team { color:#10b981; }
+
+.event-log { max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:3px; }
+.event-log::-webkit-scrollbar { width:4px; }
+.event-log::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+.log-entry { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:7px; font-size:12px; background:rgba(255,255,255,0.02); }
+.log-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.log-dot.t1 { background:var(--t1); }
+.log-dot.t2 { background:var(--t2); }
+.log-score { font-weight:800; color:var(--text); min-width:38px; font-size:13px; }
+.log-detail { color:var(--muted); flex:1; }
+.log-shot { color:var(--muted2); font-weight:600; }
+
+.card-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.card-btn { padding:10px; border-radius:10px; border:1.5px solid; font-size:12px; font-weight:700; cursor:pointer; text-align:center; transition:all 0.15s; }
+.yellow-card-btn { border-color:rgba(234,179,8,0.4); background:rgba(234,179,8,0.08); color:#eab308; }
+.yellow-card-btn:hover { background:rgba(234,179,8,0.16); }
+.red-card-btn { border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.08); color:#ef4444; }
+.red-card-btn:hover { background:rgba(239,68,68,0.16); }
+.card-issued-list { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
+.issued-card { padding:2px 8px; border-radius:8px; font-size:11px; font-weight:700; }
+.issued-card.yellow { background:rgba(234,179,8,0.2); color:#eab308; }
+.issued-card.red { background:rgba(239,68,68,0.2); color:#ef4444; }
+
+.side-change-notice { background:rgba(0,200,150,0.1); border:1px solid rgba(0,200,150,0.25); border-radius:10px; padding:12px 16px; font-size:12px; font-weight:700; color:#00ffb2; text-align:center; }
+
+.sub-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:16px; }
+.sub-card h4 { font-size:12px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+
+.games-hist { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:16px; }
+.games-hist h4 { font-size:12px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+
+@media(max-width:760px) {
+  .bd-controls-grid,.bd-stats-grid { grid-template-columns:1fr; }
+  .bd-current-score { font-size:56px; }
+  .bd-score-row { gap:10px; }
+}
+</style>
+
+<div class="bd-wrapper">
+
+{% if not state %}
+<!-- MATCH SETUP -->
+<div class="setup-card" style="max-width:820px;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <span style="font-size:60px;">🏸</span>
+    <h2 style="font-size:22px;font-weight:800;margin-top:8px;">{{ event.team1 }} vs {{ event.team2 }}</h2>
+    <p style="color:var(--muted);font-size:13px;margin-top:4px;">2 players per team (Singles or Doubles)</p>
+  </div>
+  <form id="badminton-start-form" method="POST" action="/admin/badminton/{{ event.id }}/start" onsubmit="return bdCollect()">
+    <!-- Player Mode Selector -->
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Player Mode</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label style="cursor:pointer;">
+          <input type="radio" name="player_mode" value="singles" checked style="display:none;" onchange="bdUpdateMode(this)">
+          <div class="bd-mode-card" id="bd-mode-singles" style="border:2px solid var(--accent);background:rgba(0,200,150,0.10);border-radius:12px;padding:16px;text-align:center;transition:.2s;">
+            <div style="font-size:28px;margin-bottom:6px;">🏸</div>
+            <div style="font-weight:800;font-size:15px;color:var(--accent);">Singles</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">1 vs 1</div>
+          </div>
+        </label>
+        <label style="cursor:pointer;">
+          <input type="radio" name="player_mode" value="doubles" style="display:none;" onchange="bdUpdateMode(this)">
+          <div class="bd-mode-card" id="bd-mode-doubles" style="border:2px solid var(--border2);background:var(--bg3);border-radius:12px;padding:16px;text-align:center;transition:.2s;">
+            <div style="font-size:28px;margin-bottom:6px;">🤝</div>
+            <div style="font-weight:800;font-size:15px;color:var(--muted);">Doubles</div>
+            <div style="font-size:11px;color:var(--muted2);margin-top:3px;">2 vs 2</div>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="form-group" style="max-width:340px;margin-bottom:20px;">
+      <label>Match Format</label>
+      <select name="match_type">
+        <option value="best_of_3">🏆 Best of 3 — Standard</option>
+        <option value="best_of_5">🏆 Best of 5</option>
+        <option value="single">⚡ Single Game</option>
+      </select>
+    </div>
+    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#10b981;font-weight:600;">
+      📋 BWF Rules: First to 21 · Win by 2 · Deuce at 20–20 · Max 30 · Game 3: side change at 11
+    </div>
+    {% if preset_t1 or preset_t2 %}
+    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:13px;color:#10b981;">✅ Players pre-loaded — review and start.</div>
+    {% endif %}
+    <input type="hidden" name="team1_players" id="h-bd-t1-players"/>
+    <input type="hidden" name="team2_players" id="h-bd-t2-players"/>
+
+    <!-- ── SINGLES: simple 2-player entry ── -->
+    <div id="bd-singles-form" style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Player Names</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#00c896;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">{{ event.team1 }}</div>
+          <input type="text" id="bd-singles-p1" class="form-control"
+            placeholder="Player name"
+            oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+            style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">{{ event.team2 }}</div>
+          <input type="text" id="bd-singles-p2" class="form-control"
+            placeholder="Player name"
+            oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+            style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;box-sizing:border-box;">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DOUBLES: full squad setup ── -->
+    <div id="squad-setup-root" style="display:none;"></div>
+
+    <div id="ss-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;"></div>
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;font-size:16px;font-weight:800;">🏸 Start Match</button>
+  </form>
+</div>
+<script src="/static/js/squad_setup.js"></script>
+<script>
+function bdUpdateMode(radio) {
+  const isSingles = radio.value === 'singles';
+  document.getElementById('bd-mode-singles').style.cssText = isSingles
+    ? 'border:2px solid var(--accent);background:rgba(0,200,150,0.10);border-radius:12px;padding:16px;text-align:center;transition:.2s;'
+    : 'border:2px solid var(--border2);background:var(--bg3);border-radius:12px;padding:16px;text-align:center;transition:.2s;';
+  document.getElementById('bd-mode-singles').querySelector('div:nth-child(2)').style.color = isSingles ? 'var(--accent)' : 'var(--muted)';
+  document.getElementById('bd-mode-doubles').style.cssText = !isSingles
+    ? 'border:2px solid var(--accent);background:rgba(0,200,150,0.10);border-radius:12px;padding:16px;text-align:center;transition:.2s;'
+    : 'border:2px solid var(--border2);background:var(--bg3);border-radius:12px;padding:16px;text-align:center;transition:.2s;';
+  document.getElementById('bd-mode-doubles').querySelector('div:nth-child(2)').style.color = !isSingles ? 'var(--accent)' : 'var(--muted)';
+  document.getElementById('bd-singles-form').style.display = isSingles ? '' : 'none';
+  document.getElementById('squad-setup-root').style.display = isSingles ? 'none' : '';
+  if (!isSingles && window._squad) window._squad.setMainCount(2);
+}
+(function(){
+  const presetT1Main = {{ preset_t1.split('\n') | map('trim') | reject('equalto','') | list | tojson if preset_t1 else '[]' }};
+  const presetT2Main = {{ preset_t2.split('\n') | map('trim') | reject('equalto','') | list | tojson if preset_t2 else '[]' }};
+  const toObj = arr => arr.map(p => typeof p==='string' ? {player_name:p} : p);
+  window._squad = new SquadSetup({
+    sportLabel: '🏸 Badminton',
+    mainCount: 2, subCount: 0,
+    teams: [
+      {key:'team1', name:{{ event.team1|tojson }}, color:'#00c896'},
+      {key:'team2', name:{{ event.team2|tojson }}, color:'#f97316'}
+    ],
+    positions: [],
+    preset: {
+      team1: {main: toObj(presetT1Main), subs: []},
+      team2: {main: toObj(presetT2Main), subs: []}
+    }
+  });
+  // Singles is default — hide squad setup
+  document.getElementById('squad-setup-root').style.display = 'none';
+  // Pre-fill singles inputs if preset available
+  if (presetT1Main[0]) document.getElementById('bd-singles-p1').value = presetT1Main[0];
+  if (presetT2Main[0]) document.getElementById('bd-singles-p2').value = presetT2Main[0];
+})();
+function bdCollect() {
+  const isSingles = document.querySelector('[name=player_mode]:checked').value === 'singles';
+  const errEl = document.getElementById('ss-error');
+  errEl.style.display = 'none';
+  if (isSingles) {
+    const p1 = document.getElementById('bd-singles-p1').value.trim();
+    const p2 = document.getElementById('bd-singles-p2').value.trim();
+    if (!p1 || !p2) {
+      errEl.style.display = 'block';
+      errEl.textContent = '⚠ Please enter both player names to continue.';
+      return false;
+    }
+    document.getElementById('h-bd-t1-players').value = p1;
+    document.getElementById('h-bd-t2-players').value = p2;
+    return true;
+  } else {
+    const err = window._squad.validate();
+    if (err) { errEl.style.display='block'; errEl.textContent='⚠ '+err; return false; }
+    const d = window._squad.collect();
+    document.getElementById('h-bd-t1-players').value = d.team1_players;
+    document.getElementById('h-bd-t2-players').value = d.team2_players;
+    return true;
+  }
+}
+</script>
+
+{% else %}
+<!-- LIVE SCORING -->
+{% set cg = state.current_game %}
+{% set t1s = cg.team1_score if cg else 0 %}
+{% set t2s = cg.team2_score if cg else 0 %}
+{% set is_deuce = (t1s >= 20 and t2s >= 20) %}
+{% set is_mp_t1 = (t1s >= 20 and t1s - t2s == 1) or (t1s == 29) %}
+{% set is_mp_t2 = (t2s >= 20 and t2s - t1s == 1) or (t2s == 29) %}
+{% set game_no = cg.game_no if cg else 0 %}
+{% set total_needed = 1 if state.match_type == 'single' else (2 if state.match_type == 'best_of_3' else 3) %}
+{% set is_third_side = game_no >= 3 and (t1s + t2s) >= 11 %}
+{% set all_t1_pts = namespace(v=0) %}{% set all_t2_pts = namespace(v=0) %}
+{% for g in state.games %}{% set all_t1_pts.v = all_t1_pts.v + g.team1_score %}{% set all_t2_pts.v = all_t2_pts.v + g.team2_score %}{% endfor %}
+{% set total_all = all_t1_pts.v + all_t2_pts.v %}
+{% set t1_pct = ((all_t1_pts.v / total_all * 100)|int) if total_all > 0 else 50 %}
+
+<!-- MAIN SCOREBOARD -->
+<div class="bd-scoreboard">
+  <div class="bd-top-bar">
+    <span class="bd-match-info">{{ (state.player_mode or 'singles')|upper }} &nbsp;·&nbsp; {{ state.match_type|replace('_',' ')|upper }} &nbsp;·&nbsp; BWF RALLY POINT SYSTEM</span>
+    {% if state.status == 'completed' %}<span class="bd-final-badge">✓ FINAL</span>
+    {% else %}<span class="bd-live-badge">● LIVE</span>{% endif %}
+  </div>
+
+  <div class="bd-score-row">
+    <!-- TEAM 1 -->
+    <div class="bd-team-block">
+      <div class="bd-team-name t1">{{ state.team1 }}</div>
+      <div class="bd-team-players">
+        {% if state.players and state.players[state.team1] %}{{ state.players[state.team1]|map(attribute='player_name')|join(' / ') }}{% endif %}
+      </div>
+      <div class="bd-games-row">
+        {% for i in range(total_needed) %}
+        <div class="bd-game-dot {% if i < state.team1_games %}won-t1{% else %}empty{% endif %}">{% if i < state.team1_games %}✓{% else %}·{% endif %}</div>
+        {% endfor %}
+      </div>
+      <div class="bd-current-score t1">{{ t1s }}</div>
+      <div class="bd-server-indicator {% if cg and cg.server == state.team1 %}serving{% endif %}">
+        {% if cg and cg.server == state.team1 %}🏸 SERVING{% else %}&nbsp;{% endif %}
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="bd-center-block">
+      <div class="bd-game-label">GAME</div>
+      <div class="bd-game-number">{{ game_no }}</div>
+      <div class="bd-vs">VS</div>
+      <div class="bd-status-badges">
+        {% if is_deuce %}<div class="bd-deuce-badge">⚡ DEUCE</div>{% endif %}
+        {% if is_mp_t1 and not is_deuce %}<div class="bd-mp-badge">🏆 MP · {{ state.team1 }}</div>{% endif %}
+        {% if is_mp_t2 and not is_deuce %}<div class="bd-mp-badge">🏆 MP · {{ state.team2 }}</div>{% endif %}
+        {% if state.result %}<div style="font-size:11px;color:#10b981;font-weight:800;margin-top:4px;">🏆 {{ state.result }}</div>{% endif %}
+      </div>
+      <div class="bd-rally-count">{% if cg %}Rally #{{ cg.rally_count or 0 }}{% endif %}</div>
+    </div>
+
+    <!-- TEAM 2 -->
+    <div class="bd-team-block">
+      <div class="bd-team-name t2">{{ state.team2 }}</div>
+      <div class="bd-team-players">
+        {% if state.players and state.players[state.team2] %}{{ state.players[state.team2]|map(attribute='player_name')|join(' / ') }}{% endif %}
+      </div>
+      <div class="bd-games-row">
+        {% for i in range(total_needed) %}
+        <div class="bd-game-dot {% if i < state.team2_games %}won-t2{% else %}empty{% endif %}">{% if i < state.team2_games %}✓{% else %}·{% endif %}</div>
+        {% endfor %}
+      </div>
+      <div class="bd-current-score t2">{{ t2s }}</div>
+      <div class="bd-server-indicator {% if cg and cg.server == state.team2 %}serving{% endif %}">
+        {% if cg and cg.server == state.team2 %}🏸 SERVING{% else %}&nbsp;{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Set History -->
+  <div class="bd-set-history">
+    {% for g in state.games %}
+    <div class="bd-set-pill {% if g.status == 'active' %}active{% endif %}">
+      <span style="font-size:10px;color:rgba(255,255,255,0.25);font-weight:700;">G{{ g.game_no }}</span>
+      <span class="{% if g.team1_score > g.team2_score %}sc-t1{% elif g.team1_score < g.team2_score %}sc-dim{% else %}sc-dim{% endif %}">{{ g.team1_score }}</span>
+      <span style="color:rgba(255,255,255,0.2);">–</span>
+      <span class="{% if g.team2_score > g.team1_score %}sc-t2{% elif g.team2_score < g.team1_score %}sc-dim{% else %}sc-dim{% endif %}">{{ g.team2_score }}</span>
+      {% if g.winner %}<span style="font-size:10px;color:#10b981;">✓</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if is_third_side %}
+<div class="side-change-notice">🔄 SIDE CHANGE — Players switch ends now! ({{ t1s + t2s }} points played in Game {{ game_no }})</div>
+{% endif %}
+
+{% if state.status != 'completed' and cg %}
+
+<!-- ACTION ROW -->
+<div class="bd-action-row">
+  <button class="bd-undo-btn" onclick="doUndo()">↩ Undo Last Point</button>
+  <button class="bd-undo-btn bd-srv-btn" onclick="document.getElementById('server-modal').style.display='flex'">🏸 Set Server</button>
+</div>
+
+<!-- CONTROLS GRID -->
+<div class="bd-controls-grid">
+  <!-- Score Points -->
+  <div class="bd-control-card">
+    <h4>📍 Award Point</h4>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">WINNING SHOT TYPE</div>
+      <div class="shot-grid">
+        <button class="shot-btn active" onclick="selectShot('smash',this)">💥 Smash</button>
+        <button class="shot-btn" onclick="selectShot('drop',this)">🌊 Drop Shot</button>
+        <button class="shot-btn" onclick="selectShot('net_kill',this)">⚡ Net Kill</button>
+        <button class="shot-btn" onclick="selectShot('rally',this)">🔄 Rally Win</button>
+      </div>
+    </div>
+    <div class="bd-score-panel">
+      <div class="bd-score-half">
+        <div class="bd-team-label-score t1">{{ state.team1 }}</div>
+        <button class="bd-point-btn t1" onclick="addPoint('{{ state.team1 }}')">+1 POINT</button>
+      </div>
+      <div class="bd-score-half">
+        <div class="bd-team-label-score t2">{{ state.team2 }}</div>
+        <button class="bd-point-btn t2" onclick="addPoint('{{ state.team2 }}')">+1 POINT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Faults + Cards -->
+  <div class="bd-control-card">
+    <h4>⚠️ Fault / Error</h4>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">FAULTING TEAM (point to other)</div>
+    <div class="ft-toggle">
+      <div class="ft-btn t1 active" id="fault-t1-btn" onclick="selectFaultTeam('{{ state.team1 }}',this,'t1')">{{ state.team1 }}</div>
+      <div class="ft-btn t2" id="fault-t2-btn" onclick="selectFaultTeam('{{ state.team2 }}',this,'t2')">{{ state.team2 }}</div>
+    </div>
+    <div class="fault-grid">
+      <button class="fault-btn" onclick="doFault('service_fault')">🔴 Service Fault</button>
+      <button class="fault-btn" onclick="doFault('net_fault')">🕸️ Net Fault</button>
+      <button class="fault-btn" onclick="doFault('out')">📤 Out</button>
+      <button class="fault-btn" onclick="doFault('double_hit')">✌️ Double Hit</button>
+    </div>
+
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;">🟡🔴 UMPIRE CARDS</div>
+      <div class="card-grid">
+        <button class="card-btn yellow-card-btn" onclick="openCardModal('yellow')">🟡 Yellow Card</button>
+        <button class="card-btn red-card-btn" onclick="openCardModal('red')">🔴 Red Card</button>
+      </div>
+      <div class="card-issued-list" id="cards-issued-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS + ANALYTICS GRID -->
+<div class="bd-stats-grid">
+  <!-- Player Stats -->
+  <div class="bd-stat-card">
+    <h4>🏸 Player Stats</h4>
+    {% if state.players %}
+      {% for team_name, players in state.players.items() %}
+      <div style="font-size:11px;font-weight:800;letter-spacing:1px;margin-bottom:6px;margin-top:{% if not loop.first %}10px{% else %}0{% endif %};color:{% if team_name==state.team1 %}var(--t1){% else %}var(--t2){% endif %};">{{ team_name }}</div>
+      {% for p in players %}
+      <div class="bd-player-stat-row">
+        <span class="bd-psr-name">{{ p.player_name }}</span>
+        <div class="bd-psr-pills">
+          {% if p.get('smashes',0) %}<span class="bd-stat-pill smash-pill">💥 {{ p.smashes }}</span>{% endif %}
+          {% if p.get('drops',0) %}<span class="bd-stat-pill drop-pill">🌊 {{ p.drops }}</span>{% endif %}
+          {% if p.get('net_kills',0) %}<span class="bd-stat-pill net-pill">⚡ {{ p.net_kills }}</span>{% endif %}
+          {% if p.get('unforced_errors',0) %}<span class="bd-stat-pill err-pill">❌ {{ p.unforced_errors }}</span>{% endif %}
+          {% if p.get('service_faults',0) %}<span class="bd-stat-pill fault-pill">⚠️ {{ p.service_faults }}</span>{% endif %}
+          {% if not p.get('smashes',0) and not p.get('drops',0) and not p.get('net_kills',0) %}<span style="font-size:11px;color:rgba(255,255,255,0.2);">—</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% endfor %}
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.05);font-size:10px;color:rgba(255,255,255,0.2);font-weight:600;">
+        💥 Smash · 🌊 Drop · ⚡ Net · ❌ Error · ⚠️ Fault
+      </div>
+    {% else %}
+      <div style="color:var(--muted);font-size:13px;">No player data</div>
+    {% endif %}
+  </div>
+
+  <!-- Analytics -->
+  <div class="bd-stat-card">
+    <h4>📊 Match Analytics</h4>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">TOTAL POINTS MOMENTUM</div>
+    <div class="momentum-bar-outer">
+      <div class="momentum-bar-t1" style="width:{{ t1_pct }}%;"></div>
+      <div class="momentum-bar-t2" style="width:{{ 100 - t1_pct }}%;"></div>
+    </div>
+    <div class="momentum-labels">
+      <span style="color:var(--t1);">{{ state.team1 }} {{ t1_pct }}%</span>
+      <span style="color:var(--t2);">{{ 100 - t1_pct }}% {{ state.team2 }}</span>
+    </div>
+
+    <div class="streak-row">
+      <span style="font-size:11px;color:var(--muted);font-weight:700;">CURRENT STREAK</span>
+      {% if cg and cg.get('t1_streak',0) > 1 %}<span class="streak-badge t1">🔥 {{ cg.t1_streak }}x {{ state.team1 }}</span>
+      {% elif cg and cg.get('t2_streak',0) > 1 %}<span class="streak-badge t2">🔥 {{ cg.t2_streak }}x {{ state.team2 }}</span>
+      {% else %}<span class="streak-badge none">— No streak</span>{% endif %}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);">
+      <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:24px;font-weight:900;color:var(--text);">{{ cg.rally_count or 0 }}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;">RALLIES THIS GAME</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:24px;font-weight:900;color:var(--text);">{{ state.team1_games }}–{{ state.team2_games }}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;">GAMES WON</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:24px;font-weight:900;color:var(--t1);">{{ all_t1_pts.v }}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;">{{ state.team1|truncate(10,true,'') }} PTS</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:24px;font-weight:900;color:var(--t2);">{{ all_t2_pts.v }}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;">{{ state.team2|truncate(10,true,'') }} PTS</div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      {% if game_no % 2 == 1 %}
+      <div class="court-display">
+        <span>🎾 Court Side (Game {{ game_no }})</span>
+        <span class="court-team">{{ state.team1 }} → Left</span>
+      </div>
+      {% else %}
+      <div class="court-display">
+        <span>🎾 Court Side (Game {{ game_no }})</span>
+        <span class="court-team">{{ state.team2 }} → Left</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Live Event Log -->
+<div class="bd-stat-card">
+  <h4>📜 Live Event Log</h4>
+  <div class="event-log" id="event-log">
+    <div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">Loading...</div>
+  </div>
+</div>
+
+<!-- Substitution -->
+<div class="sub-card">
+  <h4>⇄ Player Substitution</h4>
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <button class="ft-btn t1" id="sub-t1-btn" onclick="setBdTeam('{{ state.team1 }}',this,'t1')" style="flex:1;">{{ state.team1 }}</button>
+    <button class="ft-btn t2" id="sub-t2-btn" onclick="setBdTeam('{{ state.team2 }}',this,'t2')" style="flex:1;">{{ state.team2 }}</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">PLAYER OUT</div>
+      <div id="bd-out-btns" style="display:flex;flex-wrap:wrap;gap:5px;min-height:28px;"></div>
+      <input type="hidden" id="sub-bd-out" value=""/>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">PLAYER IN</div>
+      <div id="bd-in-btns" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+      <input type="text" id="bd-sub-in-text" placeholder="Type name..." style="width:100%;margin-top:6px;font-size:12px;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg3);color:var(--text);" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')" pattern="[A-Za-z ]+" title="Name must contain letters only"/>
+      <input type="hidden" id="sub-bd-in" value=""/>
+    </div>
+  </div>
+  <input type="hidden" id="sub-bd-team" value=""/>
+  <button class="btn btn-secondary" style="width:100%;margin-top:10px;font-size:13px;" onclick="doBdSub()">⇄ Confirm Substitution</button>
+</div>
+
+{% endif %}
+
+<!-- Games Breakdown Table -->
+<div class="games-hist">
+  <h4>📋 Games Breakdown</h4>
+  <table class="admin-table" style="width:100%;">
+    <thead>
+      <tr>
+        <th>Game</th>
+        <th style="color:var(--t1);">{{ state.team1 }}</th>
+        <th style="color:var(--t2);">{{ state.team2 }}</th>
+        <th>Rallies</th>
+        <th>Winner</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for g in state.games %}
+    <tr>
+      <td><strong>Game {{ g.game_no }}</strong></td>
+      <td style="font-size:22px;font-weight:900;color:{% if g.team1_score > g.team2_score %}var(--t1){% else %}var(--muted){% endif %};">{{ g.team1_score }}</td>
+      <td style="font-size:22px;font-weight:900;color:{% if g.team2_score > g.team1_score %}var(--t2){% else %}var(--muted){% endif %};">{{ g.team2_score }}</td>
+      <td style="font-size:12px;color:var(--muted);">{{ g.rally_count or '—' }}</td>
+      <td>
+        {% if g.winner %}<span style="font-weight:800;padding:3px 10px;border-radius:10px;font-size:12px;background:rgba(16,185,129,0.15);color:#10b981;">🏆 {{ g.winner }}</span>
+        {% else %}<span style="color:var(--muted);font-size:12px;">In Progress</span>{% endif %}
+      </td>
+      <td>
+        {% if g.status == 'active' %}<span class="bd-live-badge" style="font-size:10px;">LIVE</span>
+        {% else %}<span style="color:var(--muted);font-size:11px;">Done</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── DETAILED BADMINTON PLAYER SCORECARD ── #}
+<div class="games-hist" style="margin-top:16px;">
+  <h4 style="margin-bottom:14px;">🏸 Player Scorecard</h4>
+  {% for tname in [state.team1, state.team2] %}
+  {% set tplayers = state.players[tname] if tname in state.players else [] %}
+  {% set tcolor = '#00c896' if tname==state.team1 else '#f97316' %}
+  <div style="margin-bottom:16px;">
+    <div style="font-size:12px;font-weight:800;color:{{ tcolor }};margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid rgba({{ '59,130,246' if tname==state.team1 else '249,115,22' }},0.3);">{{ tname }}</div>
+    {% if tplayers %}
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;">
+            <th style="text-align:left;padding:4px 8px;">Player</th>
+            <th style="text-align:center;padding:4px 8px;">Points Won</th>
+            <th style="text-align:center;padding:4px 8px;">💥 Smashes</th>
+            <th style="text-align:center;padding:4px 8px;">🌿 Drops</th>
+            <th style="text-align:center;padding:4px 8px;">🕸 Net Kills</th>
+            <th style="text-align:center;padding:4px 8px;">Errors</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in tplayers %}
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:6px 8px;font-weight:600;">{{ p.player_name }}</td>
+            <td style="padding:6px 8px;text-align:center;font-weight:800;color:{% if p.points_won %}#10b981{% else %}var(--muted){% endif %};">{{ p.points_won or '—' }}</td>
+            <td style="padding:6px 8px;text-align:center;color:{% if p.smashes %}#ef4444{% else %}var(--muted){% endif %};">{{ p.smashes or '—' }}</td>
+            <td style="padding:6px 8px;text-align:center;color:{% if p.drops %}#8b5cf6{% else %}var(--muted){% endif %};">{{ p.drops or '—' }}</td>
+            <td style="padding:6px 8px;text-align:center;color:{% if p.net_kills %}#10b981{% else %}var(--muted){% endif %};">{{ p.net_kills or '—' }}</td>
+            <td style="padding:6px 8px;text-align:center;color:{% if p.errors %}#f59e0b{% else %}var(--muted){% endif %};">{{ p.errors or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="color:var(--muted);font-size:12px;padding:8px;">No player data available.</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {# Games won summary #}
+  {% set t1_games = state.games | selectattr('winner', 'equalto', state.team1) | list | length %}
+  {% set t2_games = state.games | selectattr('winner', 'equalto', state.team2) | list | length %}
+  <div style="padding:14px;background:rgba(255,255,255,0.03);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:24px;margin-top:8px;">
+    <div style="text-align:center;"><div style="font-size:11px;color:#00c896;font-weight:700;">{{ state.team1 }}</div><div style="font-size:28px;font-weight:900;color:#00c896;">{{ t1_games }}</div></div>
+    <div style="font-size:13px;color:var(--muted);font-weight:700;">GAMES</div>
+    <div style="text-align:center;"><div style="font-size:11px;color:#f97316;font-weight:700;">{{ state.team2 }}</div><div style="font-size:28px;font-weight:900;color:#f97316;">{{ t2_games }}</div></div>
+  </div>
+  {% if state.status == 'completed' and state.result %}
+  <div style="text-align:center;margin-top:10px;"><span style="background:rgba(16,185,129,.15);color:#10b981;border-radius:8px;padding:4px 16px;font-size:13px;font-weight:700;">🏆 {{ state.result }}</span></div>
+  {% endif %}
+</div>
+
+{% endif %}
+</div>
+
+<!-- SERVER MODAL -->
+<div id="server-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:16px;padding:28px;max-width:360px;width:90%;border:1px solid var(--border);">
+    <h3 style="margin-bottom:8px;">🏸 Set Who Is Serving</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Updates the serving indicator on the scoreboard</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="bd-point-btn t1" style="font-size:15px;" onclick="setServerDirect('{{ state.team1 if state else '' }}')">{{ state.team1 if state else '' }} is Serving</button>
+      <button class="bd-point-btn t2" style="font-size:15px;" onclick="setServerDirect('{{ state.team2 if state else '' }}')">{{ state.team2 if state else '' }} is Serving</button>
+    </div>
+    <button onclick="document.getElementById('server-modal').style.display='none'" style="width:100%;margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;">Cancel</button>
+  </div>
+</div>
+
+<!-- CARD MODAL -->
+<div id="card-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:16px;padding:28px;max-width:400px;width:90%;border:1px solid var(--border);">
+    <h3 style="margin-bottom:4px;" id="card-modal-title">Issue Card</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Select the offending team</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="ft-btn t1" onclick="selectCardTeam('{{ state.team1 if state else '' }}',this,'t1')" style="flex:1;">{{ state.team1 if state else '' }}</button>
+      <button class="ft-btn t2" onclick="selectCardTeam('{{ state.team2 if state else '' }}',this,'t2')" style="flex:1;">{{ state.team2 if state else '' }}</button>
+    </div>
+    <input type="hidden" id="card-team" value=""/>
+    <input type="text" id="card-player" placeholder="Player name (optional)" style="width:100%;margin-bottom:10px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')" title="Name must contain letters only"/>
+    <textarea id="card-reason" placeholder="Reason (time wasting, misconduct...)" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;resize:vertical;"></textarea>
+    <input type="hidden" id="card-type" value="yellow"/>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-primary" onclick="submitCard()" style="flex:1;">Issue Card</button>
+      <button onclick="document.getElementById('card-modal').style.display='none'" style="padding:10px 16px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const EID = {{ event.id }};
+const BD_TEAM1 = {{ state.team1|tojson if state else '""' }};
+const BD_TEAM2 = {{ state.team2|tojson if state else '""' }};
+const BD_PLAYERS = {{ state.players|tojson if state else '{}' }};
+const BD_SUBS = {
+  [{{ state.team1|tojson if state else '""' }}]: {{ t1_subs|tojson if t1_subs else '[]' }},
+  [{{ state.team2|tojson if state else '""' }}]: {{ t2_subs|tojson if t2_subs else '[]' }}
+};
+
+let selectedShot = 'smash';
+let faultingTeam = BD_TEAM1;
+
+function selectShot(shot, btn) {
+  selectedShot = shot;
+  document.querySelectorAll('.shot-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function selectFaultTeam(team, btn, cls) {
+  faultingTeam = team;
+  document.querySelectorAll('.ft-toggle .ft-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active', cls);
+}
+
+function selectCardTeam(team, btn, cls) {
+  document.getElementById('card-team').value = team;
+  document.querySelectorAll('#card-modal .ft-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active', cls);
+}
+
+async function addPoint(team) {
+  const res = await fetch(`/api/badminton/${EID}/point`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({team, shot_type: selectedShot})
+  });
+  const d = await res.json();
+  if (d.success) {
+    if (d.match_over) { showToast('🏆 ' + d.match_result, 'success'); setTimeout(()=>location.reload(),1800); }
+    else if (d.game_over) { showToast(`🏸 ${d.game_winner} wins this game!`, 'success'); setTimeout(()=>location.reload(),1500); }
+    else { location.reload(); }
+  } else showToast(d.error||'Error','error');
+}
+
+async function doUndo() {
+  const res = await fetch(`/api/badminton/${EID}/undo`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const d = await res.json();
+  if (d.success) { showToast('↩ Undone','info'); setTimeout(()=>location.reload(),700); }
+  else showToast(d.error||'Nothing to undo','error');
+}
+
+async function doFault(faultType) {
+  const res = await fetch(`/api/badminton/${EID}/fault`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({team: faultingTeam, fault_type: faultType})
+  });
+  const d = await res.json();
+  const labels={service_fault:'Service Fault',net_fault:'Net Fault',out:'Out',double_hit:'Double Hit'};
+  if (d.success) {
+    showToast(`⚠️ ${labels[faultType]} — point awarded to other team`,'warning');
+    if (d.match_over||d.game_over) setTimeout(()=>location.reload(),1500);
+    else setTimeout(()=>location.reload(),700);
+  } else showToast(d.error||'Error','error');
+}
+
+async function setServerDirect(team) {
+  document.getElementById('server-modal').style.display='none';
+  try {
+    const res = await fetch(`/api/badminton/${EID}/server`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({server: team})
+    });
+    const d = await res.json();
+    if (!d.success) { showToast(d.error||'Error updating server','error'); return; }
+  } catch(e) { showToast('Network error','error'); return; }
+  showToast(`🏸 Server set: ${team}`,'info');
+  setTimeout(()=>location.reload(),700);
+}
+
+function openCardModal(type) {
+  document.getElementById('card-type').value=type;
+  document.getElementById('card-modal-title').textContent = type==='yellow'?'🟡 Issue Yellow Card':'🔴 Issue Red Card';
+  document.getElementById('card-team').value='';
+  document.getElementById('card-player').value='';
+  document.getElementById('card-reason').value='';
+  document.querySelectorAll('#card-modal .ft-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('card-modal').style.display='flex';
+}
+
+async function submitCard() {
+  const team=document.getElementById('card-team').value;
+  if(!team){showToast('Select a team','error');return;}
+  const res=await fetch(`/api/badminton/${EID}/card`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({team,player:document.getElementById('card-player').value,card_type:document.getElementById('card-type').value,reason:document.getElementById('card-reason').value})
+  });
+  const d=await res.json();
+  if(d.success){document.getElementById('card-modal').style.display='none';showToast(`Card issued to ${team}`,'warning');loadCards();}
+  else showToast('Error','error');
+}
+
+async function loadCards() {
+  try {
+    const d=await(await fetch(`/api/badminton/${EID}/stats`)).json();
+    if(d.cards&&d.cards.length>0){
+      const el=document.getElementById('cards-issued-list');
+      if(el)el.innerHTML=d.cards.map(c=>`<span class="issued-card ${c.card_type}">${c.card_type==='yellow'?'🟡':'🔴'} ${c.team}${c.player?' · '+c.player:''}</span>`).join('');
+    }
+  }catch(e){}
+}
+
+async function loadEventLog() {
+  try {
+    const d=await(await fetch(`/api/badminton/${EID}/stats`)).json();
+    const el=document.getElementById('event-log');
+    if(!el)return;
+    if(!d.points||d.points.length===0){el.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px;">No points recorded yet</div>';return;}
+    const pts=[...d.points].reverse().slice(0,20);
+    const icons={smash:'💥',drop:'🌊',net_kill:'⚡',rally:'🔄',fault:'⚠️',server_update:'🏸',server_set:'🏸'};
+    el.innerHTML=pts.map(p=>{
+      const isT1=p.team===BD_TEAM1;
+      const icon=icons[p.fault_type||p.shot_type]||'🏸';
+      const ft=p.fault_type?` (${p.fault_type.replace(/_/g,' ')})`:'';
+      return `<div class="log-entry"><div class="log-dot ${isT1?'t1':'t2'}"></div><span class="log-score">${p.t1_score_after}–${p.t2_score_after}</span><span class="log-detail">${p.team}${ft}</span><span class="log-shot">${icon} ${(p.shot_type||'').replace(/_/g,' ')}</span></div>`;
+    }).join('');
+  }catch(e){
+    const el=document.getElementById('event-log');
+    if(el)el.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;">Log unavailable</div>';
+  }
+}
+
+// Substitution
+function setBdTeam(val,btn,cls){
+  document.getElementById('sub-bd-team').value=val;
+  document.querySelectorAll('.sub-card .ft-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active',cls);
+  const players=BD_PLAYERS[val]||[];
+  document.getElementById('bd-out-btns').innerHTML=players.map(p=>`<button style="padding:4px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:12px;font-weight:600;" onclick="selBdOut('${p.player_name}',this)">${p.player_name}</button>`).join('');
+  const subs=BD_SUBS[val]||[];
+  document.getElementById('bd-in-btns').innerHTML=subs.length?subs.map(p=>`<button style="padding:4px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:12px;font-weight:600;" onclick="selBdIn('${p}',this)">${p}</button>`).join(''):'<span style="font-size:12px;color:var(--muted);">No bench</span>';
+  document.getElementById('sub-bd-out').value='';
+  document.getElementById('sub-bd-in').value='';
+  document.getElementById('bd-sub-in-text').value='';
+}
+function selBdOut(name,btn){
+  document.getElementById('sub-bd-out').value=name;
+  document.querySelectorAll('#bd-out-btns button').forEach(b=>{b.style.cssText='';});
+  btn.style.borderColor='#ef4444';btn.style.color='#ef4444';btn.style.background='rgba(239,68,68,0.1)';
+}
+function selBdIn(name,btn){
+  document.getElementById('sub-bd-in').value=name;
+  document.getElementById('bd-sub-in-text').value=name;
+  document.querySelectorAll('#bd-in-btns button').forEach(b=>{b.style.cssText='';});
+  btn.style.borderColor='#10b981';btn.style.color='#10b981';btn.style.background='rgba(16,185,129,0.1)';
+}
+async function doBdSub(){
+  const team=document.getElementById('sub-bd-team').value;
+  const outP=document.getElementById('sub-bd-out').value;
+  const inP=(document.getElementById('sub-bd-in').value||document.getElementById('bd-sub-in-text').value||'').trim();
+  if(!team){showToast('Select a team','error');return;}
+  if(!outP){showToast('Select player going out','error');return;}
+  if(!inP){showToast('Enter incoming player','error');return;}
+  const d=await(await fetch(`/api/badminton/${EID}/substitute`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({team,out_player:outP,in_player:inP})})).json();
+  if(d.success){showToast(`✅ ${outP} → ${inP}`,'success');setTimeout(()=>location.reload(),800);}
+  else showToast(d.error||'Error','error');
+}
+
+// Toast notification
+function showToast(msg,type='info'){
+  const colors={success:'#10b981',error:'#ef4444',warning:'#eab308',info:'#00c896'};
+  const t=document.createElement('div');
+  t.style.cssText=`position:fixed;bottom:24px;right:24px;background:#1e293b;border:1px solid ${colors[type]||colors.info};border-left:4px solid ${colors[type]||colors.info};color:white;padding:12px 16px;border-radius:10px;z-index:9999;font-size:13px;font-weight:600;max-width:300px;`;
+  t.textContent=msg;document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.3s';setTimeout(()=>t.remove(),300);},3000);
+}
+
+// Close modals on backdrop click
+['server-modal','card-modal'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('click',e=>{if(e.target===el)el.style.display='none';});
+});
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const t=document.getElementById('bd-sub-in-text');
+  if(t)t.addEventListener('input',()=>{document.getElementById('sub-bd-in').value=t.value;});
+  loadEventLog();
+  loadCards();
+  // Init fault team
+  const ft1=document.getElementById('fault-t1-btn');
+  if(ft1){ft1.classList.add('active');}
+});
+
+setInterval(loadEventLog,12000);
+</script>
+{% endblock %}

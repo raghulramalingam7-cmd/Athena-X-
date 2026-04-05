@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Match Fixtures — Athena-X{% endblock %}
+{% block content %}
+<div class="page-container">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header" style="margin-bottom:20px;">
+    <div class="page-title-area">
+      <a href="/" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:6px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← Home</a>
+      <h1 style="font-size:26px;font-weight:900;margin:0;">📋 Match Fixtures</h1>
+      <p style="margin:4px 0 0;color:var(--muted);">
+        {{ events|length }} match{{ 'es' if events|length != 1 else '' }} found
+        {% if live_count > 0 %}&nbsp;·&nbsp;
+          <span style="color:#ef4444;font-weight:700;">🔴 {{ live_count }} LIVE</span>
+        {% endif %}
+      </p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <a href="/sports-directory" class="btn btn-secondary btn-sm">🏆 Sports</a>
+      <a href="/leaderboard" class="btn btn-secondary btn-sm">🏅 Stats</a>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:18px;">
+    <form method="GET" action="/matches" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <select name="status" onchange="this.form.submit()" class="filter-select">
+        <option value="all" {% if filter_status=='all' %}selected{% endif %}>All Statuses</option>
+        <option value="live" {% if filter_status=='live' %}selected{% endif %}>🔴 Live</option>
+        <option value="upcoming" {% if filter_status=='upcoming' %}selected{% endif %}>📅 Upcoming</option>
+        <option value="completed" {% if filter_status=='completed' %}selected{% endif %}>✅ Completed</option>
+      </select>
+      <select name="sport" onchange="this.form.submit()" class="filter-select">
+        <option value="all" {% if filter_sport=='all' %}selected{% endif %}>All Sports</option>
+        {% for s in sports %}
+          <option value="{{ s.id }}" {% if filter_sport==s.id|string %}selected{% endif %}>{{ s.icon }} {{ s.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" id="fixture-search" placeholder="🔍 Search teams, venue…"
+             class="search-input" style="flex:1;min-width:180px;"
+             oninput="filterFixtures(this.value)"/>
+    </form>
+  </div>
+
+  <!-- STATUS TABS -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    <a href="/matches?status=all&sport={{ filter_sport }}"
+       class="sport-chip {% if filter_status=='all' %}active{% endif %}" style="border-radius:8px;">All ({{ total_events }})</a>
+    <a href="/matches?status=live&sport={{ filter_sport }}"
+       class="sport-chip {% if filter_status=='live' %}active{% endif %}"
+       style="border-radius:8px;border-color:rgba(239,68,68,0.4);color:{% if filter_status=='live' %}#fff{% else %}var(--red){% endif %};">
+      🔴 Live ({{ live_count }})</a>
+    <a href="/matches?status=upcoming&sport={{ filter_sport }}"
+       class="sport-chip {% if filter_status=='upcoming' %}active{% endif %}" style="border-radius:8px;">📅 Upcoming</a>
+    <a href="/matches?status=completed&sport={{ filter_sport }}"
+       class="sport-chip {% if filter_status=='completed' %}active{% endif %}" style="border-radius:8px;">✅ Completed</a>
+  </div>
+
+  <!-- FIXTURE CARDS -->
+  {% if events %}
+  <div id="fixtures-grid" style="display:flex;flex-direction:column;gap:12px;">
+    {% for ev in events %}
+    <div class="fixture-card status-{{ ev.status }}"
+         data-search="{{ ev.title|lower }} {{ ev.team1|lower }} {{ ev.team2|lower }} {{ (ev.venue or '')|lower }}">
+
+      <!-- Sport tag / date / status -->
+      <div class="fc-topbar">
+        <div class="fc-sport-tag">{{ ev.sport_icon or '🏆' }} {{ ev.sport_name or 'Sport' }}</div>
+        <div class="fc-meta-mid">
+          {% if ev.event_date %}<span>📅 {{ ev.event_date }}</span>{% endif %}
+          {% if ev.event_time %}<span>⏰ {{ ev.event_time }}</span>{% endif %}
+          {% if ev.venue %}<span>📍 {{ ev.venue }}</span>{% endif %}
+          <span style="font-weight:700;color:#94a3b8;">{{ ev.title }}</span>
+        </div>
+        <div class="fc-status-wrap">
+          {% if ev.status == 'live' %}
+            <span class="fc-badge fc-live"><span class="pulse-dot" style="margin-right:4px;"></span>LIVE</span>
+          {% elif ev.status == 'upcoming' %}
+            <span class="fc-badge fc-upcoming">UPCOMING</span>
+          {% elif ev.status == 'completed' %}
+            <span class="fc-badge fc-done">FINAL</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Teams + Score -->
+      <div class="fc-body">
+        <div class="fc-team fc-team-left">
+          <div class="fc-team-name">{{ ev.team1 }}</div>
+          {% if ev.status in ['live','completed'] %}
+            <div class="fc-score-live" id="fc-t1-{{ ev.id }}">—</div>
+          {% endif %}
+        </div>
+        <div class="fc-vs-center">
+          <div class="fc-vs-text">VS</div>
+          {% if ev.status == 'completed' %}
+            <div class="fc-result-mini">FT</div>
+          {% elif ev.status == 'live' %}
+            <div class="fc-live-dot-anim">●</div>
+          {% endif %}
+        </div>
+        <div class="fc-team fc-team-right">
+          <div class="fc-team-name">{{ ev.team2 }}</div>
+          {% if ev.status in ['live','completed'] %}
+            <div class="fc-score-live" id="fc-t2-{{ ev.id }}">—</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Result -->
+      {% if ev.result %}
+      <div class="fc-result-bar">🏆 {{ ev.result }}</div>
+      {% endif %}
+
+      <!-- Footer -->
+      <div class="fc-footer">
+        <div class="fc-reg-info">
+          {% if ev.max_registrations > 0 %}
+            👥 {{ ev.reg_count }}/{{ ev.max_registrations }}
+            <div class="reg-bar" style="width:80px;display:inline-block;vertical-align:middle;margin-left:6px;">
+              <div class="reg-fill" style="width:{{ [(ev.reg_count/ev.max_registrations*100)|int,100]|min }}%;"></div>
+            </div>
+          {% else %}
+            👥 {{ ev.reg_count }} registered
+          {% endif %}
+        </div>
+        <div class="fc-actions">
+          <a href="/event/{{ ev.id }}" class="fc-btn fc-btn-primary">
+            {% if ev.status == 'completed' %}📊 Scorecard{% else %}🔍 Details{% endif %}
+          </a>
+          {% if ev.status == 'live' %}
+            <a href="/event/{{ ev.id }}" class="fc-btn fc-btn-live">📺 Live Score</a>
+            
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <p>No matches found for the selected filters.</p>
+    <a href="/matches" class="btn btn-primary" style="margin-top:16px;">Clear Filters</a>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.fixture-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:box-shadow .2s,transform .15s;}
+.fixture-card:hover{box-shadow:0 6px 28px rgba(0,0,0,.35);transform:translateY(-1px);}
+.fixture-card.status-live{border-color:rgba(239,68,68,.4);box-shadow:0 0 0 1px rgba(239,68,68,.12);}
+.fixture-card.status-upcoming{border-color:rgba(0,200,150,.3);}
+.fixture-card.status-completed{border-color:rgba(16,185,129,.2);}
+.fc-topbar{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);flex-wrap:wrap;}
+.fc-sport-tag{font-size:12px;font-weight:800;color:#93c5fd;letter-spacing:.4px;min-width:80px;}
+.fc-meta-mid{flex:1;display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap;align-items:center;}
+.fc-status-wrap{margin-left:auto;}
+.fc-badge{font-size:11px;font-weight:800;border-radius:8px;padding:3px 10px;letter-spacing:.5px;display:flex;align-items:center;}
+.fc-live{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.35);}
+.fc-upcoming{background:rgba(0,200,150,.15);color:#00ffb2;border:1px solid rgba(0,200,150,.3);}
+.fc-done{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.25);}
+.fc-body{display:grid;grid-template-columns:1fr 80px 1fr;align-items:center;padding:18px 20px;gap:8px;}
+.fc-team{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.fc-team-left{align-items:flex-end;}
+.fc-team-right{align-items:flex-start;}
+.fc-team-name{font-size:18px;font-weight:900;color:#e2e8f0;text-align:center;line-height:1.2;}
+.fc-score-live{font-size:28px;font-weight:900;color:#fbbf24;font-family:monospace;min-height:34px;text-align:center;transition:all .3s;}
+.fc-vs-center{text-align:center;}
+.fc-vs-text{font-size:13px;font-weight:900;color:#475569;letter-spacing:1px;}
+.fc-result-mini{font-size:10px;font-weight:700;color:#10b981;margin-top:3px;letter-spacing:.5px;}
+.fc-live-dot-anim{font-size:14px;color:#ef4444;animation:blink 1s infinite;margin-top:3px;}
+.fc-result-bar{background:linear-gradient(90deg,rgba(16,185,129,.1),rgba(16,185,129,.04));border-top:1px solid rgba(16,185,129,.2);padding:7px 20px;font-size:13px;font-weight:700;color:#4ade80;text-align:center;}
+.fc-footer{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-top:1px solid var(--border);background:rgba(255,255,255,.01);flex-wrap:wrap;gap:8px;}
+.fc-reg-info{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.fc-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.fc-btn{font-size:12px;font-weight:700;border-radius:8px;padding:5px 14px;text-decoration:none;transition:all .15s;white-space:nowrap;}
+.fc-btn-primary{background:rgba(96,165,250,.13);color:#60a5fa;border:1px solid rgba(96,165,250,.25);}
+.fc-btn-primary:hover{background:rgba(96,165,250,.22);}
+.fc-btn-live{background:rgba(239,68,68,.13);color:#f87171;border:1px solid rgba(239,68,68,.28);}
+.fc-btn-live:hover{background:rgba(239,68,68,.22);}
+@media(max-width:540px){
+  .fc-body{grid-template-columns:1fr 50px 1fr;padding:14px 12px;}
+  .fc-team-name{font-size:14px;}
+  .fc-score-live{font-size:22px;}
+  .fc-vs-center{font-size:11px;}
+}
+</style>
+
+<script>
+function filterFixtures(q){
+  q=q.toLowerCase();
+  document.querySelectorAll('.fixture-card').forEach(c=>{
+    c.style.display=(!q||c.dataset.search.includes(q))?'':'none';
+  });
+}
+
+// Load live/completed scores dynamically for all sports
+(async function(){
+  const cards=[...document.querySelectorAll('.fixture-card')];
+  for(const card of cards){
+    const link=card.querySelector('a[href^="/event/"]');
+    if(!link) continue;
+    const eid=parseInt(link.href.split('/event/')[1]);
+    if(!eid) continue;
+    const isLive=card.classList.contains('status-live');
+    const isDone=card.classList.contains('status-completed');
+    if(!isLive && !isDone) continue;
+    try{
+      const r=await fetch('/api/event/'+eid+'/live');
+      const d=await r.json();
+      if(!d||d.status==='no_match'||d.status==='not_found') continue;
+      const t1el=document.getElementById('fc-t1-'+eid);
+      const t2el=document.getElementById('fc-t2-'+eid);
+      if(!t1el||!t2el) continue;
+      // Cricket
+      if(d.innings && d.innings.length){
+        const first=d.innings[0], last=d.innings[d.innings.length-1];
+        if(d.innings.length===1){
+          const s=last.total_runs+'/'+last.wickets+'<br><small>('+last.overs_display+')</small>';
+          if(d.team1===last.batting_team){t1el.innerHTML=s;t2el.textContent='yet to bat';}
+          else{t2el.innerHTML=s;t1el.textContent='yet to bat';}
+        } else {
+          const s1=first.total_runs+'/'+first.wickets;
+          const s2=last.total_runs+'/'+last.wickets;
+          if(d.team1===first.batting_team){t1el.textContent=s1;t2el.textContent=s2;}
+          else{t2el.textContent=s1;t1el.textContent=s2;}
+        }
+      }
+      // Football / Basketball / Kabaddi (team1_score)
+      else if(d.team1_score!==undefined){
+        t1el.textContent=d.team1_score;
+        t2el.textContent=d.team2_score;
+      }
+      // Volleyball (sets)
+      else if(d.team1_sets!==undefined){
+        t1el.innerHTML=d.team1_sets+'<br><small>sets</small>';
+        t2el.innerHTML=d.team2_sets+'<br><small>sets</small>';
+      }
+      // Badminton (games)
+      else if(d.team1_games!==undefined){
+        t1el.innerHTML=d.team1_games+'<br><small>games</small>';
+        t2el.innerHTML=d.team2_games+'<br><small>games</small>';
+      }
+      // Chess
+      else if(d.player1_score!==undefined){
+        t1el.innerHTML=d.player1_score+'<br><small>pts</small>';
+        t2el.innerHTML=d.player2_score+'<br><small>pts</small>';
+      }
+      // Carrom (boards)
+      else if(d.team1_boards!==undefined){
+        t1el.innerHTML=d.team1_boards+'<br><small>boards</small>';
+        t2el.innerHTML=d.team2_boards+'<br><small>boards</small>';
+      }
+    }catch(e){}
+  }
+})();
+</script>
+{% endblock %}

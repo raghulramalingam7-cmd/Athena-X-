@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}{{ sport.icon }} {{ sport.name }} Points Table — Athena-X{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/leaderboard.css"/>
+<style>
+/* ── Sport Points Page ── */
+.points-sport-hero {
+  background: linear-gradient(135deg, var(--card) 0%, var(--bg3) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.points-sport-hero-left { display: flex; align-items: center; gap: 18px; }
+.points-sport-hero-icon { font-size: 52px; line-height: 1; }
+.points-sport-hero h1   { font-family: var(--font-num); font-size: 26px; font-weight: 900;
+                           letter-spacing: -0.4px; margin: 0 0 4px; }
+.points-sport-hero p    { color: var(--muted2); font-size: 13px; margin: 0; }
+
+/* ── Sport switcher ── */
+.sport-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.sport-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--tr);
+  cursor: pointer;
+}
+.sport-pill:hover    { border-color: var(--accent); color: var(--accent); }
+.sport-pill.active   { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── Main table ── */
+.pts-table-wrap  { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 32px; }
+.pts-table       { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--card); }
+.pts-table thead th {
+  background: var(--bg3); color: var(--muted); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px; padding: 12px 16px;
+  text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border);
+}
+.pts-table thead th:not(:first-child):not(:nth-child(2)) { text-align: right; }
+.pts-table tbody td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.pts-table tbody tr:last-child td { border-bottom: none; }
+.pts-table tbody tr:hover td      { background: var(--bg3); }
+.pts-table tbody tr.top-row td    { background: color-mix(in srgb, var(--yellow) 6%, transparent); }
+.pts-table tbody tr.top-row:hover td { background: color-mix(in srgb, var(--yellow) 10%, transparent); }
+
+.pts-rank        { width: 44px; font-family: var(--font-num); font-weight: 900; color: var(--muted2); text-align: center !important; }
+.pts-rank.gold   { color: var(--yellow); }
+.pts-rank.silver { color: #b0b8c8; }
+.pts-rank.bronze { color: #c17d3c; }
+
+.pts-team { display: flex; align-items: center; gap: 10px; }
+.pts-avatar {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.pts-name  { font-weight: 700; font-size: 15px; }
+.pts-sub   { color: var(--muted2); font-size: 12px; }
+
+.td-num    { text-align: right !important; font-family: var(--font-num); font-weight: 700; }
+.td-pts    { font-size: 18px !important; font-weight: 900 !important; color: var(--accent2) !important; }
+.td-w      { color: var(--green) !important; }
+.td-l      { color: var(--red) !important; }
+.td-d      { color: var(--yellow) !important; }
+.td-gd-pos { color: var(--green) !important; }
+.td-gd-neg { color: var(--red) !important; }
+.td-gd-zer { color: var(--muted2) !important; }
+
+.form-pip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  font-size: 10px; font-weight: 900; color: #fff; margin-right: 3px;
+}
+.form-pip.W { background: var(--green); }
+.form-pip.L { background: var(--red); }
+.form-pip.D { background: var(--yellow); }
+
+/* ── Recent results ── */
+.section-title { font-size: 16px; font-weight: 800; margin: 0 0 14px; }
+.results-list  { display: flex; flex-direction: column; gap: 10px; }
+.result-row {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.result-teams  { flex: 1; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 14px; }
+.result-score  { font-family: var(--font-num); font-weight: 900; font-size: 18px;
+                 color: var(--accent2); white-space: nowrap; }
+.result-badge  { font-size: 11px; padding: 3px 9px; border-radius: 999px;
+                 background: color-mix(in srgb, var(--green) 15%, transparent);
+                 color: var(--green); font-weight: 700; white-space: nowrap; }
+.result-meta   { color: var(--muted2); font-size: 12px; }
+
+/* ── Stats legend ── */
+.legend-bar {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 18px; margin-bottom: 28px; font-size: 12px; color: var(--muted2);
+}
+.legend-item strong { color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <!-- Hero -->
+  <div class="points-sport-hero">
+    <div class="points-sport-hero-left">
+      <div class="points-sport-hero-icon">{{ sport.icon }}</div>
+      <div>
+        <h1>{{ sport.name }} — Points Table</h1>
+        <p>Season standings based on {{ table|length }} team{{ 's' if table|length != 1 }} · {{ recent_matches|length }} completed match{{ 'es' if recent_matches|length != 1 }}</p>
+      </div>
+    </div>
+    <a href="/points" class="btn btn-secondary btn-sm">← All Sports</a>
+  </div>
+
+  <!-- Sport Switcher -->
+  <div class="sport-switcher">
+    {% for s in all_sports %}
+    <a href="/points/{{ s.id }}" class="sport-pill {% if s.id == sport.id %}active{% endif %}">
+      {{ s.icon }} {{ s.name }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Legend -->
+  <div class="legend-bar">
+    <span class="legend-item"><strong>MP</strong> — Matches Played</span>
+    <span class="legend-item"><strong>W</strong> — Wins</span>
+    <span class="legend-item"><strong>D</strong> — Draws / Ties</span>
+    <span class="legend-item"><strong>L</strong> — Losses</span>
+    <span class="legend-item"><strong>{{ label_gf }}</strong> — Points/Runs/Goals Scored</span>
+    <span class="legend-item"><strong>{{ label_ga }}</strong> — Points/Runs/Goals Conceded</span>
+    <span class="legend-item"><strong>GD</strong> — Difference</span>
+    <span class="legend-item"><strong>Pts</strong> — Win=3 · Draw=1 · Loss=0</span>
+  </div>
+
+  <!-- Main Points Table -->
+  {% if table %}
+  <div class="pts-table-wrap">
+    <table class="pts-table">
+      <thead>
+        <tr>
+          <th style="width:44px; text-align:center;">#</th>
+          <th>Team / Player</th>
+          <th>MP</th>
+          <th>W</th>
+          <th>D</th>
+          <th>L</th>
+          <th>{{ label_gf }}</th>
+          <th>{{ label_ga }}</th>
+          <th>GD</th>
+          <th>Pts</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table %}
+        <tr {% if loop.index == 1 %}class="top-row"{% endif %}>
+          <!-- Rank -->
+          <td style="text-align:center;">
+            <span class="pts-rank {% if loop.index==1 %}gold{% elif loop.index==2 %}silver{% elif loop.index==3 %}bronze{% endif %}">
+              {% if loop.index==1 %}🥇
+              {% elif loop.index==2 %}🥈
+              {% elif loop.index==3 %}🥉
+              {% else %}{{ loop.index }}{% endif %}
+            </span>
+          </td>
+
+          <!-- Team Name -->
+          <td>
+            <div class="pts-team">
+              <div class="pts-avatar">{{ row.team[0].upper() }}</div>
+              <div>
+                <div class="pts-name">{{ row.team }}</div>
+                {% if loop.index == 1 and row.mp > 0 %}
+                <div class="pts-sub" style="color:var(--yellow);">🏆 Leader</div>
+                {% elif row.mp > 0 %}
+                <div class="pts-sub">
+                  Win rate:
+                  {% if row.mp > 0 %}{{ ((row.w / row.mp) * 100) | round(0) | int }}%{% else %}—{% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+
+          <!-- Stats -->
+          <td class="td-num" style="color:var(--muted2);">{{ row.mp }}</td>
+          <td class="td-num td-w">{{ row.w }}</td>
+          <td class="td-num td-d">{{ row.d }}</td>
+          <td class="td-num td-l">{{ row.l }}</td>
+          <td class="td-num" style="color:var(--muted2);">{{ row.gf }}</td>
+          <td class="td-num" style="color:var(--muted2);">{{ row.ga }}</td>
+          <td class="td-num {% if row.gd > 0 %}td-gd-pos{% elif row.gd < 0 %}td-gd-neg{% else %}td-gd-zer{% endif %}">
+            {% if row.gd > 0 %}+{% endif %}{{ row.gd }}
+          </td>
+          <td class="td-num td-pts">{{ row.pts }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state" style="margin-bottom:32px;">
+    <div class="empty-state-icon">{{ sport.icon }}</div>
+    <p>No completed {{ sport.name }} matches yet. Points table will appear once matches are completed.</p>
+    <a href="/matches" class="btn btn-primary btn-sm" style="margin-top:12px;">View Upcoming Matches</a>
+  </div>
+  {% endif %}
+
+  <!-- Recent Results -->
+  {% if recent_matches %}
+  <div>
+    <div class="section-title">📋 Recent Completed Matches</div>
+    <div class="results-list">
+      {% for ev in recent_matches %}
+      <div class="result-row">
+        <div class="result-teams">
+          <span>{{ ev.team1 }}</span>
+          <span style="color:var(--muted2); font-weight:400; font-size:12px;">vs</span>
+          <span>{{ ev.team2 }}</span>
+        </div>
+        {% if ev.result %}
+        <div class="result-badge">✓ {{ ev.result }}</div>
+        {% endif %}
+        <div class="result-meta">
+          {% if ev.event_date %}📅 {{ ev.event_date }}{% endif %}
+          {% if ev.venue %} · 📍 {{ ev.venue }}{% endif %}
+        </div>
+        <a href="/event/{{ ev.id }}" class="btn btn-secondary btn-sm" style="flex-shrink:0;">View →</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

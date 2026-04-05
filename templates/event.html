@@ -1,0 +1,2358 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} — Athena-X{% endblock %}
+{% block content %}
+<div class="event-page">
+
+  {# ═══════════════════════════════════════════════════
+     GOOGLE CRICKET WIDGET STYLE — LIVE EVENT PAGE
+  ═══════════════════════════════════════════════════ #}
+
+  {% if cricket_state and event.status in ("live", "completed") %}
+  {# ── FULL GOOGLE CRICKET WIDGET ── #}
+  {% set inn = cricket_state.current_inning %}
+
+  <div class="gcw-wrap" id="live-score-box">
+
+    {# ── TOP BAR: Match name + share ── #}
+    <div class="gcw-topbar">
+      <div class="gcw-breadcrumb">
+        {{ event.sport_icon }} {{ event.sport_name }}
+        {% if event.venue %} &rsaquo; {{ event.venue }}{% endif %}
+      </div>
+     
+    </div>
+
+    {# ── MAIN SCORE ROW ── #}
+    <div class="gcw-score-block">
+
+      {# Team 1 (batting/bowled) #}
+      <div class="gcw-team gcw-team-left">
+        <div class="gcw-flag">{{ event.sport_icon }}</div>
+        {% if inn and inn.inning_no == 2 %}
+          {# 2nd innings — show 1st innings total on left #}
+          {% set inn1 = cricket_state.innings[0] if cricket_state.innings else none %}
+          {% if inn1 %}
+          <div class="gcw-score-num">{{ inn1.total_runs }}<span class="gcw-wkts">/{{ inn1.wickets }}</span></div>
+          <div class="gcw-overs">({{ inn1.overs_display }})</div>
+          <div class="gcw-team-name">{{ inn1.batting_team }}</div>
+          {% endif %}
+        {% else %}
+          <div class="gcw-score-num">
+            {% if inn %}{{ inn.total_runs }}<span class="gcw-wkts">/{{ inn.wickets }}</span>{% else %}—{% endif %}
+          </div>
+          <div class="gcw-overs">({% if inn %}{{ inn.overs_display }}{% endif %})</div>
+          <div class="gcw-team-name">{{ event.team1 }}</div>
+        {% endif %}
+      </div>
+
+      {# Center: Live label #}
+      <div class="gcw-center">
+        <div class="gcw-live-lbl">Live</div>
+        <div class="gcw-live-dot"></div>
+      </div>
+
+      {# Team 2 #}
+      <div class="gcw-team gcw-team-right">
+        <div class="gcw-flag">🏏</div>
+        {% if inn and inn.inning_no == 2 %}
+          <div class="gcw-score-num">{{ inn.total_runs }}<span class="gcw-wkts">/{{ inn.wickets }}</span></div>
+          <div class="gcw-overs">({{ inn.overs_display }})</div>
+          <div class="gcw-team-name">{{ inn.batting_team }}</div>
+        {% else %}
+          <div class="gcw-score-num" style="color:var(--muted2)">—</div>
+          <div class="gcw-overs">&nbsp;</div>
+          <div class="gcw-team-name">{{ event.team2 }}</div>
+        {% endif %}
+      </div>
+
+    </div>{# end score block #}
+
+    {# ── STATUS LINE ── #}
+    {% if cricket_state.target_info %}{% set ti = cricket_state.target_info %}
+    <div class="gcw-status-line">
+      <strong>{{ ti.runs_needed }}</strong> needed off <strong>{{ ti.balls_left }}</strong> balls
+      &nbsp;·&nbsp; CRR: {{ ti.crr if ti.crr else '—' }} &nbsp; RRR: {{ ti.rrr }}
+    </div>
+    {% elif inn %}
+    <div class="gcw-status-line">
+      {{ inn.batting_team }} batting
+      {% if inn.inning_no == 1 and inn.balls > 5 %}
+        {% set crr = (inn.total_runs * 6.0 / inn.balls)|round(1) %}
+        &nbsp;·&nbsp; CRR: {{ crr }}
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="gcw-sub-line">
+      {{ event.title }}{% if event.event_date %} · {{ event.event_date }}{% endif %}
+    </div>
+
+    {# ── PLAYERS ROW ── #}
+    {% if inn %}
+    <div class="gcw-players-row">
+      {# Bowlers on left #}
+      <div class="gcw-players-col">
+        {% for b in inn.bowlers if b.balls > 0 %}
+          {% if loop.index <= 2 %}
+          <div class="gcw-player-line">
+            <span class="gcw-player-dot {% if loop.first %}gcw-dot-active{% endif %}"></span>
+            <span class="gcw-player-name">{{ b.player_name }}</span>
+            <span class="gcw-player-stat">{{ b.wickets }}/{{ b.runs }} ({{ b.overs_display }})</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+        <div class="gcw-col-label">{{ event.team1 }} bowling</div>
+      </div>
+      {# Batsmen on right — current inning only #}
+      <div class="gcw-players-col gcw-players-right">
+        {% set ns = namespace(count=0) %}
+        {% for b in inn.batters if not b.is_out %}
+          {% if ns.count < 2 %}
+          <div class="gcw-player-line gcw-player-right">
+            <span class="gcw-player-name">{{ b.player_name }}*</span>
+            <span class="gcw-player-stat">{{ b.runs }} ({{ b.balls }})</span>
+            <span class="gcw-player-dot {% if b.is_on_strike == 1 %}gcw-dot-active{% endif %}"></span>
+          </div>
+          {% set ns.count = ns.count + 1 %}
+          {% endif %}
+        {% endfor %}
+        <div class="gcw-col-label gcw-col-right">{{ inn.batting_team }} batting</div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── BALL-BY-BALL ROW ── #}
+    {% if inn and inn.overs %}
+    <div class="gcw-balls-wrap">
+      <div class="gcw-balls-row" id="gcw-balls-scroll">
+        {% set recent_overs = inn.overs[-3:] if inn.overs|length > 3 else inn.overs %}
+        {% for over in recent_overs %}
+          <span class="gcw-ball-over-num">{{ over.over }}th</span>
+          {% if over.deliveries %}
+            {% for d in over.deliveries %}
+              {% if d.runs == 6 %}
+                <span class="gcw-ball gcw-ball-6">6</span>
+              {% elif d.runs == 4 %}
+                <span class="gcw-ball gcw-ball-4">4</span>
+              {% elif d.is_wicket %}
+                <span class="gcw-ball gcw-ball-w">W</span>
+              {% elif d.runs == 0 %}
+                <span class="gcw-ball gcw-ball-dot">·</span>
+              {% else %}
+                <span class="gcw-ball gcw-ball-n">{{ d.runs }}</span>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {# fallback: show over runs as single chip #}
+            <span class="gcw-ball gcw-ball-n">{{ over.runs }}</span>
+          {% endif %}
+          <span class="gcw-ball-sep"></span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── TABS: Overview / Scorecard / Commentary / Stats ── #}
+    <div class="gcw-tabs">
+      <button class="gcw-tab gcw-tab-active" onclick="gcwTab(this,'gcw-pane-overview')">Overview</button>
+      <button class="gcw-tab" onclick="gcwTab(this,'gcw-pane-scorecard')">Scorecard</button>
+      <button class="gcw-tab" onclick="gcwTab(this,'gcw-pane-stats')">Stats</button>
+    </div>
+
+    {# ── TAB: OVERVIEW ── #}
+    <div class="gcw-pane" id="gcw-pane-overview">
+
+      {# Projected / CRR / Balls left stats #}
+      {% if inn and inn.inning_no == 1 and inn.balls > 5 %}
+      {% set crr = (inn.total_runs * 6.0 / inn.balls)|round(1) %}
+      {% set proj = (crr * event.total_overs)|int %}
+      <div class="gcw-stats-strip">
+        <div class="gcw-stat-cell">
+          <div class="gcw-stat-lbl">Projected</div>
+          <div class="gcw-stat-val">{{ [proj-5, inn.total_runs]|max }}–{{ proj+10 }}</div>
+        </div>
+        <div class="gcw-stat-cell">
+          <div class="gcw-stat-lbl">CRR</div>
+          <div class="gcw-stat-val">{{ crr }}</div>
+        </div>
+        <div class="gcw-stat-cell">
+          <div class="gcw-stat-lbl">Balls Left</div>
+          <div class="gcw-stat-val">{{ event.total_overs * 6 - inn.balls }}</div>
+        </div>
+      </div>
+      {% elif cricket_state.target_info %}{% set ti = cricket_state.target_info %}
+      <div class="gcw-stats-strip">
+        <div class="gcw-stat-cell">
+          <div class="gcw-stat-lbl">Target</div>
+          <div class="gcw-stat-val" style="color:var(--yellow)">{{ ti.target }}</div>
+        </div>
+        <div class="gcw-stat-cell">
+          <div class="gcw-stat-lbl">Need</div>
+          <div class="gcw-stat-val" style="color:var(--red)">{{ ti.runs_needed }}</div>
+        </div>
+        <div class="gcw-stat-cell">
+          <div class="gcw-stat-lbl">RRR</div>
+          <div class="gcw-stat-val">{{ ti.rrr }}</div>
+        </div>
+        <div class="gcw-stat-cell">
+          <div class="gcw-stat-lbl">Balls</div>
+          <div class="gcw-stat-val">{{ ti.balls_left if ti.balls_left else '—' }}</div>
+        </div>
+      </div>
+      {% if inn %}
+      {% set pct = [(inn.total_runs / ti.target * 100)|int, 100]|min %}
+      <div style="padding:0 16px 12px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted2);margin-bottom:4px;">
+          <span>Chase: {{ inn.total_runs }}/{{ ti.target }}</span><span>{{ pct }}%</span>
+        </div>
+        <div style="background:var(--bg3);border-radius:3px;height:4px;">
+          <div style="height:100%;width:{{ pct }}%;background:var(--green);border-radius:3px;"></div>
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+
+      {# Over chart #}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Run Rate Chart</div>
+        <div id="live-over-chart-svg" style="width:100%;"></div>
+        <div id="comp-over-chart-svg-inline" style="width:100%;"></div>
+        <div id="live-over-chart-loading" style="text-align:center;color:var(--muted);padding:12px;font-size:13px;">Loading…</div>
+        <div id="live-over-chart-legend" style="display:none;gap:12px;margin-top:6px;font-size:12px;flex-wrap:wrap;color:var(--muted2);"></div>
+        <div id="comp-over-chart-legend-inline" style="display:none;gap:12px;margin-top:6px;font-size:12px;flex-wrap:wrap;color:var(--muted2);"></div>
+      </div>
+
+      {% if event.status == 'live' %}
+      <div class="gcw-refresh-note">🔄 Auto-refresh in <span id="refresh-countdown">5</span>s</div>
+      {% endif %}
+    </div>{# end overview pane #}
+
+    {# ── TAB: SCORECARD ── #}
+    <div class="gcw-pane gcw-pane-hidden" id="gcw-pane-scorecard">
+      {% for inn2 in cricket_state.innings %}
+      <div style="border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:4px;">
+        <div class="gcw-sc-header">
+          {{ inn2.batting_team }}
+          <span style="font-family:var(--font-cond);font-size:22px;font-weight:900;color:var(--yellow);margin-left:auto;">{{ inn2.total_runs }}/{{ inn2.wickets }}</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px;">({{ inn2.overs_display }})</span>
+        </div>
+        <div style="overflow-x:auto;">
+        <table class="gcw-sc-table">
+          <thead><tr>
+            <th>Batter</th><th>Dismissal</th>
+            <th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th>
+          </tr></thead>
+          <tbody>
+          {% for b in inn2.batters if b.balls > 0 or b.is_out %}
+          <tr>
+            <td class="gcw-sc-name">
+              {{ b.player_name }}{% if not b.is_out %}<span style="color:var(--green)">*</span>{% endif %}
+              {% if b.runs >= 100 %}<span class="gcw-badge-century">💯</span>
+              {% elif b.runs >= 50 %}<span class="gcw-badge-fifty">50+</span>{% endif %}
+            </td>
+            <td class="gcw-sc-dismiss">
+              {% if b.is_out %}<span style="color:var(--muted2)">{{ b.dismissal }}</span>
+              {% else %}<em style="color:var(--green);font-size:11px;">not out</em>{% endif %}
+            </td>
+            <td class="gcw-sc-num" style="color:var(--yellow);font-weight:900;">{{ b.runs }}</td>
+            <td class="gcw-sc-num">{{ b.balls }}</td>
+            <td class="gcw-sc-num" style="color:var(--accent2)">{{ b.fours }}</td>
+            <td class="gcw-sc-num" style="color:#00ffb2">{{ b.sixes }}</td>
+            <td class="gcw-sc-num {% if b.strike_rate >= 150 %}gcw-sr-hot{% elif b.strike_rate >= 100 %}gcw-sr-ok{% endif %}">{{ b.strike_rate }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="gcw-sc-total">
+            <td colspan="2"><strong>TOTAL</strong> <span style="font-size:11px;color:var(--muted)">({{ inn2.wickets }} wkts, {{ inn2.overs_display }} ov)</span></td>
+            <td class="gcw-sc-num" colspan="5" style="color:var(--yellow);font-family:var(--font-cond);font-size:16px;font-weight:900;">{{ inn2.total_runs }}</td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="gcw-sc-sub-header">⚾ Bowling</div>
+        <div style="overflow-x:auto;">
+        <table class="gcw-sc-table">
+          <thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
+          <tbody>
+          {% for b in inn2.bowlers if b.balls > 0 %}
+          <tr>
+            <td class="gcw-sc-name">{{ b.player_name }}
+              {% if b.wickets >= 5 %}<span class="gcw-badge-fifer">5W🔥</span>
+              {% elif b.wickets >= 3 %}<span class="gcw-badge-fifer">3W</span>{% endif %}
+            </td>
+            <td class="gcw-sc-num">{{ b.overs_display }}</td>
+            <td class="gcw-sc-num" style="color:var(--green)">{{ b.maidens }}</td>
+            <td class="gcw-sc-num">{{ b.runs }}</td>
+            <td class="gcw-sc-num" style="color:var(--red);font-weight:900;">{{ b.wickets }}</td>
+            <td class="gcw-sc-num {% if b.economy <= 6 %}gcw-eco-good{% elif b.economy >= 12 %}gcw-eco-bad{% endif %}">{{ b.economy }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# ── TAB: STATS ── #}
+    <div class="gcw-pane gcw-pane-hidden" id="gcw-pane-stats">
+      {% for inn2 in cricket_state.innings %}
+      {% set top_bat = inn2.batters|sort(attribute='runs',reverse=True)|first if inn2.batters else none %}
+      {% set top_bowl = inn2.bowlers|sort(attribute='wickets',reverse=True)|first if inn2.bowlers else none %}
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">{{ inn2.batting_team }} Innings</div>
+        {% if top_bat and top_bat.balls > 0 %}
+        <div class="gcw-highlight-card gcw-hl-bat">
+          <span class="gcw-hl-icon">🏏</span>
+          <div>
+            <div class="gcw-hl-lbl">Top Scorer</div>
+            <div class="gcw-hl-name">{{ top_bat.player_name }}</div>
+            <div class="gcw-hl-stat">{{ top_bat.runs }}({{ top_bat.balls }}) · {{ top_bat.fours }}×4 · {{ top_bat.sixes }}×6</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if top_bowl and top_bowl.balls > 0 %}
+        <div class="gcw-highlight-card gcw-hl-bowl" style="margin-top:8px;">
+          <span class="gcw-hl-icon">⚾</span>
+          <div>
+            <div class="gcw-hl-lbl">Best Bowler</div>
+            <div class="gcw-hl-name">{{ top_bowl.player_name }}</div>
+            <div class="gcw-hl-stat">{{ top_bowl.wickets }}/{{ top_bowl.runs }} · {{ top_bowl.overs_display }} ov · Eco {{ top_bowl.economy }}</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {# ── WAGON WHEEL (public) ── #}
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">🎯 Wagon Wheel</div>
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Gold lines = admin-marked directions · Others estimated</div>
+        <canvas id="pub-wagon-wheel" width="300" height="300" style="display:block;margin:0 auto;border-radius:50%;"></canvas>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:10px;font-size:11px;color:var(--muted2);">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent);border-radius:2px;"></span> Fours</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#c56ef8;border-radius:2px;"></span> Sixes</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;"></span> 1–3 runs</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;"></span> Wickets</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:rgba(255,255,255,.2);border-radius:2px;"></span> Dots</span>
+        </div>
+        <div id="pub-ww-loading" style="text-align:center;color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>
+      </div>
+
+      {# ── RUN DISTRIBUTION (public) ── #}
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📊 Run Distribution</div>
+        <div id="pub-run-dist"></div>
+        <div id="pub-run-dist-loading" style="text-align:center;color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>
+      </div>
+
+      {# ── BATTER STRIKE RATES (public) ── #}
+      <div style="padding:14px 16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">⚡ Batters</div>
+        <div id="pub-batter-list"></div>
+        <div id="pub-bowler-list" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    {# ── ACTION BUTTONS ── #}
+    <div class="gcw-actions">
+      {% if event.status == 'live' %}
+      <a href="/scoreboard/event/{{ event.id }}" class="gcw-action-btn">
+        <span>▶</span> Watch live
+      </a>
+      {% else %}
+      <button class="gcw-action-btn" onclick="gcwTab(document.querySelector('[onclick*=gcw-pane-stats]'),'gcw-pane-stats')" style="cursor:pointer;border:none;">
+        <span>📊</span> View Stats
+      </button>
+      <button class="gcw-action-btn" onclick="gcwTab(document.querySelector('[onclick*=gcw-pane-scorecard]'),'gcw-pane-scorecard')" style="cursor:pointer;border:none;background:rgba(197,110,248,0.12);border-color:rgba(197,110,248,0.35);color:#00ffb2;">
+        <span>📋</span> Full Scorecard
+      </button>
+      {% endif %}
+    </div>
+
+  </div>{# end gcw-wrap #}
+
+  {% else %}
+  {# ══════════════════════════════════════════
+     NON-LIVE or NON-CRICKET event header
+  ════════════════════════════════════════════ #}
+  <div class="event-header">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <a href="/matches" style="display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 12px;transition:all .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">← Matches</a>
+      <a href="/" style="display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 12px;transition:all .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">🏠 Home</a>
+    </div>
+    <div class="event-sport-tag">{{ event.sport_icon }} {{ event.sport_name }}</div>
+    <div class="status-pill status-{{ event.status }}">
+      {% if event.status == "live" %}<span class="pulse-dot"></span> LIVE
+      {% elif event.status == "upcoming" %}📅 Upcoming
+      {% elif event.status == "completed" %}✅ Completed
+      {% else %}{{ event.status }}{% endif %}
+    </div>
+    <h1 class="event-title">{{ event.title }}</h1>
+    <div class="event-teams-display">
+      <div class="team-block"><div class="team-big">{{ event.team1 }}</div></div>
+      <div class="vs-big">VS</div>
+      <div class="team-block"><div class="team-big">{{ event.team2 }}</div></div>
+    </div>
+    <div class="event-meta-row">
+      {% if event.event_date %}<span>📅 {{ event.event_date }}{% if event.event_time %} at {{ event.event_time }}{% endif %}</span>{% endif %}
+      {% if event.venue %}<span>📍 {{ event.venue }}</span>{% endif %}
+      <span>👥 {{ event.reg_count }} registered</span>
+    </div>
+    {% if event.result %}<div class="event-result">🏆 {{ event.result }}</div>{% endif %}
+    {% if event.description %}<p class="event-desc">{{ event.description }}</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── BODY ── -->
+  <div class="event-body">
+
+
+    {% if not (cricket_state and event.status in ("live", "completed")) %}
+    <!-- share row -->
+    <div class="share-box" style="margin-bottom:20px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+      <span style="color:var(--muted2);">🔗 Share:</span>
+      <span class="share-url">{{ request.url }}</span>
+      <button class="btn btn-secondary btn-xs" onclick="navigator.clipboard.writeText(window.location.href);this.textContent='Copied!'">Copy Link</button>
+
+    </div>
+    {% endif %}
+
+
+    {# ══════════════ CRICKET COMPLETED ══════════════ #}
+    {% if cricket_state and event.status == "completed" %}
+    <div class="pro-scorecard-wrap">
+      {% if cricket_state.result %}
+      <div class="psc-result-hero">
+        <span class="psc-result-trophy">🏆</span>
+        <div class="psc-result-text">{{ cricket_state.result }}</div>
+      </div>
+      {% endif %}
+      <div class="psc-innings-bar">
+        {% for inn in cricket_state.innings %}
+        <div class="psc-inn-pill">
+          <span class="psc-inn-team">{{ inn.batting_team }}</span>
+          <span class="psc-inn-score">{{ inn.total_runs }}/{{ inn.wickets }}</span>
+          <span class="psc-inn-ov">({{ inn.overs_display }} ov)</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="psc-section">
+        <div class="psc-section-title">📊 Run Rate Chart</div>
+        <div id="comp-over-chart-svg" style="width:100%;"></div>
+        <div id="comp-over-chart-loading" style="text-align:center;color:var(--muted);padding:10px;font-size:13px;">Loading…</div>
+        <div id="comp-over-chart-legend" style="display:none;gap:12px;margin-top:6px;font-size:12px;flex-wrap:wrap;"></div>
+      </div>
+      {% for inn in cricket_state.innings %}
+      <div class="psc-inning-block">
+        <div class="psc-inn-header">
+          <div class="psc-inn-header-left">
+            <span class="psc-inn-label">{{ loop.index }}{{ 'ST' if loop.index==1 else 'ND' }} INNINGS</span>
+            <span class="psc-inn-team-name">{{ inn.batting_team }}</span>
+          </div>
+          <div class="psc-inn-scoreline">
+            <span class="psc-runs">{{ inn.total_runs }}</span>
+            <span class="psc-slash">/</span>
+            <span class="psc-wkts">{{ inn.wickets }}</span>
+            <span class="psc-ov-tag">({{ inn.overs_display }} ov)</span>
+          </div>
+        </div>
+        <div class="psc-table-label">🏏 BATTING</div>
+        <div class="psc-table-scroll">
+        <table class="psc-table">
+          <thead><tr>
+            <th class="psc-th psc-th-name">Batter</th>
+            <th class="psc-th psc-th-dismiss">Dismissal</th>
+            <th class="psc-th psc-th-num">R</th><th class="psc-th psc-th-num">B</th>
+            <th class="psc-th psc-th-num">4s</th><th class="psc-th psc-th-num">6s</th>
+            <th class="psc-th psc-th-num">SR</th>
+          </tr></thead>
+          <tbody>
+          {% for b in inn.batters if b.balls > 0 or b.is_out %}
+          <tr class="psc-bat-row {% if b.runs >= 50 %}psc-milestone{% endif %}">
+            <td class="psc-td psc-td-name">
+              <span class="psc-player-name">{{ b.player_name }}</span>
+              {% if not b.is_out %}<span class="psc-not-out-dot">*</span>{% endif %}
+              {% if b.runs >= 100 %}<span class="psc-century-badge">💯</span>
+              {% elif b.runs >= 50 %}<span class="psc-fifty-badge">50+</span>{% endif %}
+            </td>
+            <td class="psc-td psc-td-dismiss">
+              {% if b.is_out %}<span class="psc-dismiss-text">{{ b.dismissal }}</span>
+              {% else %}<em class="psc-not-out">not out</em>{% endif %}
+            </td>
+            <td class="psc-td psc-td-num psc-runs-cell"><strong>{{ b.runs }}</strong></td>
+            <td class="psc-td psc-td-num">{{ b.balls }}</td>
+            <td class="psc-td psc-td-num psc-four">{{ b.fours }}</td>
+            <td class="psc-td psc-td-num psc-six">{{ b.sixes }}</td>
+            <td class="psc-td psc-td-num {% if b.strike_rate >= 150 %}psc-sr-hot{% elif b.strike_rate >= 100 %}psc-sr-good{% endif %}">{{ b.strike_rate }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="psc-extras-row">
+              <td class="psc-td psc-td-name">Extras</td>
+              <td class="psc-td psc-td-dismiss" style="font-size:11px;">({{ inn.extras }} extra{{ 's' if inn.extras != 1 else '' }})</td>
+              <td class="psc-td psc-td-num" colspan="5">{{ inn.extras }}</td>
+            </tr>
+            <tr class="psc-total-row">
+              <td class="psc-td psc-td-name"><strong>TOTAL</strong></td>
+              <td class="psc-td psc-td-dismiss" style="font-size:11px;color:var(--muted);">({{ inn.wickets }} wkts, {{ inn.overs_display }} ov)</td>
+              <td class="psc-td psc-td-num psc-total-runs" colspan="5"><strong>{{ inn.total_runs }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+        </div>
+        <div class="psc-table-label" style="margin-top:12px;">⚾ BOWLING</div>
+        <div class="psc-table-scroll">
+        <table class="psc-table">
+          <thead><tr>
+            <th class="psc-th psc-th-name">Bowler</th>
+            <th class="psc-th psc-th-num">O</th><th class="psc-th psc-th-num">M</th>
+            <th class="psc-th psc-th-num">R</th><th class="psc-th psc-th-num">W</th>
+            <th class="psc-th psc-th-num">Eco</th>
+          </tr></thead>
+          <tbody>
+          {% for b in inn.bowlers if b.balls > 0 %}
+          <tr class="psc-bowl-row {% if b.wickets >= 3 %}psc-milestone{% endif %}">
+            <td class="psc-td psc-td-name">
+              <span class="psc-player-name">{{ b.player_name }}</span>
+              {% if b.wickets >= 5 %}<span class="psc-fifer-badge">5W 🔥</span>
+              {% elif b.wickets >= 3 %}<span class="psc-threer-badge">3W</span>{% endif %}
+            </td>
+            <td class="psc-td psc-td-num">{{ b.overs_display }}</td>
+            <td class="psc-td psc-td-num psc-maiden-cell">{{ b.maidens }}</td>
+            <td class="psc-td psc-td-num">{{ b.runs }}</td>
+            <td class="psc-td psc-td-num psc-wkts-cell"><strong>{{ b.wickets }}</strong></td>
+            <td class="psc-td psc-td-num {% if b.economy <= 6 %}psc-eco-good{% elif b.economy >= 12 %}psc-eco-bad{% endif %}">{{ b.economy }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% set fow_batters = inn.batters|selectattr('is_out','equalto',1)|list %}
+        {% if fow_batters %}
+        <div class="psc-fow-section">
+          <div class="psc-fow-label">📉 Fall of Wickets</div>
+          <div class="psc-fow-chips">
+            {% for b in fow_batters %}<span class="psc-fow-chip">{{ b.player_name }} ({{ b.runs }})</span>{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% set top_bat = inn.batters|sort(attribute='runs',reverse=True)|first if inn.batters else none %}
+        {% set top_bowl = inn.bowlers|sort(attribute='wickets',reverse=True)|first if inn.bowlers else none %}
+        {% if top_bat or top_bowl %}
+        <div class="psc-highlights">
+          {% if top_bat and top_bat.balls > 0 %}
+          <div class="psc-highlight-card psc-hl-bat">
+            <div class="psc-hl-icon">🏏</div>
+            <div>
+              <div class="psc-hl-label">Top Scorer</div>
+              <div class="psc-hl-name">{{ top_bat.player_name }}</div>
+              <div class="psc-hl-stat">{{ top_bat.runs }}({{ top_bat.balls }}) · {{ top_bat.fours }}×4 · {{ top_bat.sixes }}×6 · SR {{ top_bat.strike_rate }}</div>
+            </div>
+          </div>
+          {% endif %}
+          {% if top_bowl and top_bowl.balls > 0 %}
+          <div class="psc-highlight-card psc-hl-bowl">
+            <div class="psc-hl-icon">⚾</div>
+            <div>
+              <div class="psc-hl-label">Best Bowler</div>
+              <div class="psc-hl-name">{{ top_bowl.player_name }}</div>
+              <div class="psc-hl-stat">{{ top_bowl.wickets }}/{{ top_bowl.runs }} · {{ top_bowl.overs_display }} ov · Eco {{ top_bowl.economy }}</div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}{# end cricket completed #}
+
+    {# ══════ KABADDI DETAILED SCORECARD ══════ #}
+    {% if kabaddi_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header" style="background:linear-gradient(135deg,#422006,#1c1c2e);">
+        <span>🤼</span><span>Kabaddi — Half {{ kabaddi_state.current_half }}/2</span>
+        {% if kabaddi_state.status == 'completed' %}<span class="psc2-badge-done">FULL TIME</span>
+        {% else %}<span class="psc2-badge-live">LIVE</span>{% endif %}
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if kabaddi_state.team1_score > kabaddi_state.team2_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name" id="kb-t1-name">{{ kabaddi_state.team1 }}</div>
+          <div class="psc2-big-score" id="kb-t1-score">{{ kabaddi_state.team1_score }}</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if kabaddi_state.team2_score > kabaddi_state.team1_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name" id="kb-t2-name">{{ kabaddi_state.team2 }}</div>
+          <div class="psc2-big-score" id="kb-t2-score">{{ kabaddi_state.team2_score }}</div>
+        </div>
+      </div>
+      {% if kabaddi_state.status == 'completed' and kabaddi_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ kabaddi_state.result }}</div>
+      {% endif %}
+      {# Detailed player stats #}
+      {% for team_key in [kabaddi_state.team1, kabaddi_state.team2] %}
+      {% set is_t1 = (team_key == kabaddi_state.team1) %}
+      {% set team_color = '#60a5fa' if is_t1 else '#f97316' %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:{{ team_color }};text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">{{ team_key }}</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.04);">
+                <th style="padding:7px 8px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;">Player</th>
+                <th style="padding:7px 6px;text-align:center;color:#f97316;font-weight:700;font-size:10px;">Raid Pts</th>
+                <th style="padding:7px 6px;text-align:center;color:#60a5fa;font-weight:700;font-size:10px;">Tackle Pts</th>
+                <th style="padding:7px 6px;text-align:center;color:#fbbf24;font-weight:700;font-size:10px;">Super Tkl</th>
+                <th style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:700;font-size:10px;">Bonus</th>
+                <th style="padding:7px 6px;text-align:center;color:#10b981;font-weight:700;font-size:10px;">Revivals</th>
+                <th style="padding:7px 6px;text-align:center;color:var(--muted);font-weight:700;font-size:10px;">Total</th>
+                <th style="padding:7px 6px;text-align:center;font-weight:700;font-size:10px;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in kabaddi_state.players[team_key] %}
+              {% if not p.get('is_bench') %}
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:7px 8px;font-weight:700;color:var(--text);">{{ p.player_name }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#f97316;font-weight:800;">{{ p.raid_points or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#60a5fa;font-weight:800;">{{ p.tackle_points or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#fbbf24;font-weight:800;">{{ p.super_tackles or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:800;">{{ p.bonus_points or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#10b981;font-weight:800;">{{ p.revivals or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;font-weight:900;color:{{ team_color }};">{{ (p.raid_points or 0)+(p.tackle_points or 0)+(p.bonus_points or 0) }}</td>
+                <td style="padding:7px 6px;text-align:center;">
+                  {% if p.is_out %}<span style="background:rgba(239,68,68,0.15);color:#ef4444;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;">OUT</span>
+                  {% else %}<span style="background:rgba(16,185,129,0.15);color:#10b981;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;">ON MAT</span>{% endif %}
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+      {% if kabaddi_state.status != 'completed' %}
+      <script>
+      setInterval(async function(){
+        try{var r=await fetch('/api/kabaddi/{{ event.id }}/state');var d=await r.json();
+        if(!d||d.error)return;
+        document.getElementById('kb-t1-score').textContent=d.team1_score;
+        document.getElementById('kb-t2-score').textContent=d.team2_score;
+        if(d.status==='completed')location.reload();}catch(e){}
+      },5000);
+      </script>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ══════ FOOTBALL DETAILED SCORECARD ══════ #}
+    {% if football_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header" style="background:linear-gradient(135deg,#0d2a0d,#1c1c2e);">
+        <span>⚽</span><span>Football — Half {{ football_state.current_half }}/2</span>
+        {% if football_state.status == 'completed' %}<span class="psc2-badge-done">FULL TIME</span>
+        {% else %}
+          <span class="psc2-badge-live">LIVE</span>
+          <span id="fb-timer-badge" style="background:#ef4444;border-radius:12px;padding:2px 10px;font-size:11px;font-family:monospace;margin-left:6px;">00:00</span>
+        {% endif %}
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if football_state.team1_score > football_state.team2_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ football_state.team1 }}</div>
+          <div class="psc2-big-score" id="fb-t1-score">{{ football_state.team1_score }}</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if football_state.team2_score > football_state.team1_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ football_state.team2 }}</div>
+          <div class="psc2-big-score" id="fb-t2-score">{{ football_state.team2_score }}</div>
+        </div>
+      </div>
+      {% if football_state.status == 'completed' and football_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ football_state.result }}</div>
+      {% endif %}
+      {# Goals timeline #}
+      {% set goals = football_state.events | selectattr('event_type','equalto','goal') | list %}
+      {% if goals %}
+      <div style="padding:12px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">⚽ Goals</div>
+        {% for g in goals %}
+        {% set is_t1 = (g.team == football_state.team1) %}
+        <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;">
+          <span style="font-size:10px;font-family:monospace;background:rgba(255,255,255,0.07);border-radius:4px;padding:2px 6px;color:var(--muted);">{{ g.minute }}'</span>
+          <span style="flex:1;font-weight:700;color:{{ '#60a5fa' if is_t1 else '#f97316' }};">{{ g.player_name }}</span>
+          <span style="font-size:11px;color:var(--muted);">{{ g.team }}</span>
+          {% if g.assist_player %}<span style="font-size:10px;color:#00ffb2;">assist: {{ g.assist_player }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {# Player stats per team #}
+      {% for team_key in [football_state.team1, football_state.team2] %}
+      {% set is_t1 = (team_key == football_state.team1) %}
+      {% set team_color = '#60a5fa' if is_t1 else '#f97316' %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:{{ team_color }};text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">{{ team_key }}</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.04);">
+                <th style="padding:7px 8px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;">#</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;">Player</th>
+                <th style="padding:7px 6px;text-align:center;color:#10b981;font-weight:700;font-size:10px;">Goals</th>
+                <th style="padding:7px 6px;text-align:center;color:#60a5fa;font-weight:700;font-size:10px;">Assists</th>
+                <th style="padding:7px 6px;text-align:center;color:#fbbf24;font-weight:700;font-size:10px;">🟨</th>
+                <th style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:700;font-size:10px;">🟥</th>
+                <th style="padding:7px 6px;text-align:center;font-weight:700;font-size:10px;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in football_state.active_players[team_key] %}
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:7px 8px;color:var(--muted);font-size:11px;">{{ p.player_no }}</td>
+                <td style="padding:7px 8px;font-weight:700;color:var(--text);">{{ p.player_name }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#10b981;font-weight:800;">{{ p.goals or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#60a5fa;font-weight:800;">{{ p.assists or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#fbbf24;font-weight:800;">{{ p.yellow_cards or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:800;">{{ p.red_cards or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;">
+                  {% if p.is_banned %}<span style="background:rgba(239,68,68,0.15);color:#ef4444;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;">BANNED</span>
+                  {% elif p.is_sub %}<span style="background:rgba(251,191,36,0.15);color:#fbbf24;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;">SUB</span>
+                  {% else %}<span style="background:rgba(16,185,129,0.15);color:#10b981;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;">ON FIELD</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+      <script>
+      (function(){
+        var fbOff={{ football_state.timer_elapsed or 0 }},fbRun={{ 'true' if football_state.timer_running else 'false' }},fbBase=fbRun?Date.now():0;
+        function fbFmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+        function fbEl(){return fbRun?fbOff+Math.floor((Date.now()-fbBase)/1000):fbOff;}
+        var tb=document.getElementById('fb-timer-badge');
+        if(tb){if(fbRun)setInterval(function(){tb.textContent=fbFmt(fbEl());},1000);tb.textContent=fbFmt(fbEl());}
+        {% if football_state.status != 'completed' %}
+        setInterval(async function(){
+          try{var r=await fetch('/api/football/{{ event.id }}/state');var d=await r.json();
+          if(!d||d.error)return;
+          var t1=document.getElementById('fb-t1-score');var t2=document.getElementById('fb-t2-score');
+          if(t1)t1.textContent=d.team1_score;if(t2)t2.textContent=d.team2_score;
+          if(d.status==='completed')location.reload();}catch(e){}
+        },8000);
+        {% endif %}
+      })();
+      </script>
+    </div>
+    {% endif %}
+
+    {# ══════ BASKETBALL DETAILED SCORECARD ══════ #}
+    {% if basketball_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header psc2-basketball">
+        <span>🏀</span><span>Basketball</span>
+        {% if basketball_state.status == 'completed' %}<span class="psc2-badge-done">FINAL</span>
+        {% else %}<span class="psc2-badge-live">Q{{ basketball_state.current_quarter }} LIVE</span>{% endif %}
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if basketball_state.team1_score > basketball_state.team2_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ basketball_state.team1 }}</div>
+          <div class="psc2-big-score" id="bb-t1-score">{{ basketball_state.team1_score }}</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if basketball_state.team2_score > basketball_state.team1_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ basketball_state.team2 }}</div>
+          <div class="psc2-big-score" id="bb-t2-score">{{ basketball_state.team2_score }}</div>
+        </div>
+      </div>
+      {% if basketball_state.status == 'completed' and basketball_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ basketball_state.result }}</div>
+      {% endif %}
+      {# Quarter breakdown #}
+      {% if basketball_state.quarters %}
+      <div style="padding:12px 16px;border-top:1px solid var(--border);overflow-x:auto;">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Quarter Scores</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:rgba(255,255,255,0.04);">
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;">Team</th>
+            {% for q in basketball_state.quarters %}<th style="padding:6px 10px;text-align:center;color:var(--muted);font-size:10px;">Q{{ q.quarter_no }}</th>{% endfor %}
+            <th style="padding:6px 10px;text-align:center;color:var(--text);font-size:10px;font-weight:800;">TOT</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+              <td style="padding:7px 8px;font-weight:800;color:#60a5fa;">{{ basketball_state.team1 }}</td>
+              {% for q in basketball_state.quarters %}<td style="padding:7px 10px;text-align:center;font-weight:700;">{{ q.team1_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#60a5fa;font-size:15px;">{{ basketball_state.team1_score }}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px;font-weight:800;color:#f97316;">{{ basketball_state.team2 }}</td>
+              {% for q in basketball_state.quarters %}<td style="padding:7px 10px;text-align:center;font-weight:700;">{{ q.team2_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#f97316;font-size:15px;">{{ basketball_state.team2_score }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {# Player stats #}
+      {% for team_key in [basketball_state.team1, basketball_state.team2] %}
+      {% set is_t1 = (team_key == basketball_state.team1) %}
+      {% set team_color = '#60a5fa' if is_t1 else '#f97316' %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:{{ team_color }};text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">{{ team_key }}</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.04);">
+                <th style="padding:7px 8px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;">Player</th>
+                <th style="padding:7px 6px;text-align:center;color:#f97316;font-weight:700;font-size:10px;">PTS</th>
+                <th style="padding:7px 6px;text-align:center;color:#60a5fa;font-weight:700;font-size:10px;">REB</th>
+                <th style="padding:7px 6px;text-align:center;color:#10b981;font-weight:700;font-size:10px;">AST</th>
+                <th style="padding:7px 6px;text-align:center;color:#fbbf24;font-weight:700;font-size:10px;">STL</th>
+                <th style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:700;font-size:10px;">BLK</th>
+                <th style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:700;font-size:10px;">FOULS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in basketball_state.players[team_key] %}
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:7px 8px;font-weight:700;color:var(--text);">
+                  {{ p.player_name }}
+                  {% if p.is_fouled_out %}<span style="font-size:9px;background:rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;padding:1px 5px;margin-left:4px;">FOUL OUT</span>{% endif %}
+                </td>
+                <td style="padding:7px 6px;text-align:center;color:#f97316;font-weight:900;">{{ p.points or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;font-weight:700;">{{ p.rebounds or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#10b981;font-weight:700;">{{ p.assists or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#fbbf24;font-weight:700;">{{ p.steals or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:700;">{{ p.blocks or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:700;">{{ p.fouls or 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+      {% if basketball_state.status != 'completed' %}
+      <script>
+      setInterval(async function(){
+        try{var r=await fetch('/api/basketball/{{ event.id }}/state');var d=await r.json();
+        if(!d||d.error)return;
+        var t1=document.getElementById('bb-t1-score');var t2=document.getElementById('bb-t2-score');
+        if(t1)t1.textContent=d.team1_score;if(t2)t2.textContent=d.team2_score;
+        if(d.status==='completed')location.reload();}catch(e){}
+      },7000);
+      </script>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ══════ VOLLEYBALL DETAILED SCORECARD ══════ #}
+    {% if volleyball_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header" style="background:linear-gradient(135deg,#1a0a2e,#1c1c2e);">
+        <span>🏐</span><span>Volleyball</span>
+        {% if volleyball_state.status == 'completed' %}<span class="psc2-badge-done">FINAL</span>
+        {% else %}<span class="psc2-badge-live">SET {{ volleyball_state.current_set }} LIVE</span>{% endif %}
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if volleyball_state.team1_sets > volleyball_state.team2_sets %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ volleyball_state.team1 }}</div>
+          <div class="psc2-big-score" id="vb-t1-score">{{ volleyball_state.team1_sets }}</div>
+          <div class="psc2-unit">sets</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if volleyball_state.team2_sets > volleyball_state.team1_sets %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ volleyball_state.team2 }}</div>
+          <div class="psc2-big-score" id="vb-t2-score">{{ volleyball_state.team2_sets }}</div>
+          <div class="psc2-unit">sets</div>
+        </div>
+      </div>
+      {% if volleyball_state.status == 'completed' and volleyball_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ volleyball_state.result }}</div>
+      {% endif %}
+      {# Set breakdown #}
+      {% if volleyball_state.sets %}
+      <div style="padding:12px 16px;border-top:1px solid var(--border);overflow-x:auto;">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Set Scores</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:rgba(255,255,255,0.04);">
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;">Team</th>
+            {% for s in volleyball_state.sets %}<th style="padding:6px 10px;text-align:center;color:var(--muted);font-size:10px;">S{{ s.set_no }}</th>{% endfor %}
+            <th style="padding:6px 10px;text-align:center;color:var(--text);font-size:10px;font-weight:800;">SETS WON</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+              <td style="padding:7px 8px;font-weight:800;color:#60a5fa;">{{ volleyball_state.team1 }}</td>
+              {% for s in volleyball_state.sets %}<td style="padding:7px 10px;text-align:center;font-weight:{% if s.winner==volleyball_state.team1 %}900{% else %}600{% endif %};color:{% if s.winner==volleyball_state.team1 %}#60a5fa{% else %}var(--text){% endif %};">{{ s.team1_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#60a5fa;font-size:15px;">{{ volleyball_state.team1_sets }}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px;font-weight:800;color:#f97316;">{{ volleyball_state.team2 }}</td>
+              {% for s in volleyball_state.sets %}<td style="padding:7px 10px;text-align:center;font-weight:{% if s.winner==volleyball_state.team2 %}900{% else %}600{% endif %};color:{% if s.winner==volleyball_state.team2 %}#f97316{% else %}var(--text){% endif %};">{{ s.team2_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#f97316;font-size:15px;">{{ volleyball_state.team2_sets }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {# Player stats #}
+      {% for team_key in [volleyball_state.team1, volleyball_state.team2] %}
+      {% set is_t1 = (team_key == volleyball_state.team1) %}
+      {% set team_color = '#60a5fa' if is_t1 else '#f97316' %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:{{ team_color }};text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">{{ team_key }}</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.04);">
+                <th style="padding:7px 8px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;">Player</th>
+                <th style="padding:7px 6px;text-align:center;color:#f97316;font-weight:700;font-size:10px;">Spikes</th>
+                <th style="padding:7px 6px;text-align:center;color:#60a5fa;font-weight:700;font-size:10px;">Blocks</th>
+                <th style="padding:7px 6px;text-align:center;color:#10b981;font-weight:700;font-size:10px;">Aces</th>
+                <th style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:700;font-size:10px;">Digs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in volleyball_state.players[team_key] %}
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:7px 8px;font-weight:700;color:var(--text);">{{ p.player_name }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#f97316;font-weight:800;">{{ p.spikes or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#60a5fa;font-weight:800;">{{ p.blocks or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#10b981;font-weight:800;">{{ p.aces or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:800;">{{ p.digs or 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+      {% if volleyball_state.status != 'completed' %}
+      <script>
+      setInterval(async function(){
+        try{var r=await fetch('/api/volleyball/{{ event.id }}/state');var d=await r.json();
+        if(!d||d.error)return;
+        var t1=document.getElementById('vb-t1-score');var t2=document.getElementById('vb-t2-score');
+        if(t1)t1.textContent=d.team1_sets;if(t2)t2.textContent=d.team2_sets;
+        if(d.status==='completed')location.reload();}catch(e){}
+      },6000);
+      </script>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ══════ BADMINTON DETAILED SCORECARD ══════ #}
+    {% if badminton_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header psc2-badminton">
+        <span>🏸</span><span>Badminton</span>
+        {% if badminton_state.status == 'completed' %}<span class="psc2-badge-done">FINAL</span>
+        {% else %}<span class="psc2-badge-live">GAME {{ badminton_state.current_game }} LIVE</span>{% endif %}
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if badminton_state.team1_games > badminton_state.team2_games %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ badminton_state.team1 }}</div>
+          <div class="psc2-big-score" id="bd-t1-score">{{ badminton_state.team1_games }}</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if badminton_state.team2_games > badminton_state.team1_games %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ badminton_state.team2 }}</div>
+          <div class="psc2-big-score" id="bd-t2-score">{{ badminton_state.team2_games }}</div>
+        </div>
+      </div>
+      {% if badminton_state.status == 'completed' and badminton_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ badminton_state.result }}</div>
+      {% endif %}
+      {# Game breakdown #}
+      {% if badminton_state.games %}
+      <div style="padding:12px 16px;border-top:1px solid var(--border);overflow-x:auto;">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Game Scores</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:rgba(255,255,255,0.04);">
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;">Team</th>
+            {% for g in badminton_state.games %}<th style="padding:6px 10px;text-align:center;color:var(--muted);font-size:10px;">G{{ g.game_no }}</th>{% endfor %}
+            <th style="padding:6px 10px;text-align:center;color:var(--text);font-size:10px;font-weight:800;">GAMES WON</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+              <td style="padding:7px 8px;font-weight:800;color:#60a5fa;">{{ badminton_state.team1 }}</td>
+              {% for g in badminton_state.games %}<td style="padding:7px 10px;text-align:center;font-weight:{% if g.winner==badminton_state.team1 %}900{% else %}600{% endif %};color:{% if g.winner==badminton_state.team1 %}#60a5fa{% else %}var(--text){% endif %};">{{ g.team1_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#60a5fa;font-size:15px;">{{ badminton_state.team1_games }}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px;font-weight:800;color:#f97316;">{{ badminton_state.team2 }}</td>
+              {% for g in badminton_state.games %}<td style="padding:7px 10px;text-align:center;font-weight:{% if g.winner==badminton_state.team2 %}900{% else %}600{% endif %};color:{% if g.winner==badminton_state.team2 %}#f97316{% else %}var(--text){% endif %};">{{ g.team2_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#f97316;font-size:15px;">{{ badminton_state.team2_games }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {# Player stats #}
+      {% for team_key in [badminton_state.team1, badminton_state.team2] %}
+      {% set is_t1 = (team_key == badminton_state.team1) %}
+      {% set team_color = '#60a5fa' if is_t1 else '#f97316' %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:{{ team_color }};text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">{{ team_key }}</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.04);">
+                <th style="padding:7px 8px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;">Player</th>
+                <th style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:700;font-size:10px;">Smashes</th>
+                <th style="padding:7px 6px;text-align:center;color:#10b981;font-weight:700;font-size:10px;">Net Kills</th>
+                <th style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:700;font-size:10px;">Drops</th>
+                <th style="padding:7px 6px;text-align:center;color:#64748b;font-weight:700;font-size:10px;">Errors</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in badminton_state.players[team_key] %}
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:7px 8px;font-weight:700;color:var(--text);">{{ p.player_name }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:800;">{{ p.smashes or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#10b981;font-weight:800;">{{ p.net_kills or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:800;">{{ p.drops or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#64748b;font-weight:800;">{{ p.unforced_errors or 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+      {% if badminton_state.status != 'completed' %}
+      <script>
+      setInterval(async function(){
+        try{var r=await fetch('/api/badminton/{{ event.id }}/state');var d=await r.json();
+        if(!d||d.error)return;
+        var t1=document.getElementById('bd-t1-score');var t2=document.getElementById('bd-t2-score');
+        if(t1)t1.textContent=d.team1_games;if(t2)t2.textContent=d.team2_games;
+        if(d.status==='completed')location.reload();}catch(e){}
+      },6000);
+      </script>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ══════ TABLE TENNIS DETAILED SCORECARD ══════ #}
+    {% if tabletennis_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header psc2-badminton">
+        <span>🏓</span><span>Table Tennis</span>
+        {% if tabletennis_state.status == 'completed' %}<span class="psc2-badge-done">FINAL</span>
+        {% else %}<span class="psc2-badge-live">GAME {{ tabletennis_state.current_game.game_no if tabletennis_state.current_game else '' }} LIVE</span>{% endif %}
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if tabletennis_state.team1_games > tabletennis_state.team2_games %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ tabletennis_state.team1 }}</div>
+          <div class="psc2-big-score" id="tt-t1-score">{{ tabletennis_state.team1_games }}</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if tabletennis_state.team2_games > tabletennis_state.team1_games %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ tabletennis_state.team2 }}</div>
+          <div class="psc2-big-score" id="tt-t2-score">{{ tabletennis_state.team2_games }}</div>
+        </div>
+      </div>
+      {% if tabletennis_state.status == 'completed' and tabletennis_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ tabletennis_state.result }}</div>
+      {% endif %}
+      {# Game breakdown #}
+      {% if tabletennis_state.games %}
+      <div style="padding:12px 16px;border-top:1px solid var(--border);overflow-x:auto;">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Game Scores</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:rgba(255,255,255,0.04);">
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;">Team</th>
+            {% for g in tabletennis_state.games %}<th style="padding:6px 10px;text-align:center;color:var(--muted);font-size:10px;">G{{ g.game_no }}</th>{% endfor %}
+            <th style="padding:6px 10px;text-align:center;color:var(--text);font-size:10px;font-weight:800;">GAMES WON</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+              <td style="padding:7px 8px;font-weight:800;color:#60a5fa;">{{ tabletennis_state.team1 }}</td>
+              {% for g in tabletennis_state.games %}<td style="padding:7px 10px;text-align:center;font-weight:{% if g.winner==tabletennis_state.team1 %}900{% else %}600{% endif %};color:{% if g.winner==tabletennis_state.team1 %}#60a5fa{% else %}var(--text){% endif %};">{{ g.team1_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#60a5fa;font-size:15px;">{{ tabletennis_state.team1_games }}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px;font-weight:800;color:#f97316;">{{ tabletennis_state.team2 }}</td>
+              {% for g in tabletennis_state.games %}<td style="padding:7px 10px;text-align:center;font-weight:{% if g.winner==tabletennis_state.team2 %}900{% else %}600{% endif %};color:{% if g.winner==tabletennis_state.team2 %}#f97316{% else %}var(--text){% endif %};">{{ g.team2_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#f97316;font-size:15px;">{{ tabletennis_state.team2_games }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {# Player stats #}
+      {% for team_key in [tabletennis_state.team1, tabletennis_state.team2] %}
+      {% set is_t1 = (team_key == tabletennis_state.team1) %}
+      {% set team_color = '#60a5fa' if is_t1 else '#f97316' %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:{{ team_color }};text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">{{ team_key }}</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.04);">
+                <th style="padding:7px 8px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;">Player</th>
+                <th style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:700;font-size:10px;">Smashes</th>
+                <th style="padding:7px 6px;text-align:center;color:#10b981;font-weight:700;font-size:10px;">Loops</th>
+                <th style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:700;font-size:10px;">Drops</th>
+                <th style="padding:7px 6px;text-align:center;color:#64748b;font-weight:700;font-size:10px;">Errors</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in tabletennis_state.players[team_key] %}
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:7px 8px;font-weight:700;color:var(--text);">{{ p.player_name }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#ef4444;font-weight:800;">{{ p.smashes or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#10b981;font-weight:800;">{{ p.loops or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#00ffb2;font-weight:800;">{{ p.drops or 0 }}</td>
+                <td style="padding:7px 6px;text-align:center;color:#64748b;font-weight:800;">{{ p.unforced_errors or 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+      {% if tabletennis_state.status != 'completed' %}
+      <script>
+      setInterval(async function(){
+        try{var r=await fetch('/api/tabletennis/{{ event.id }}/state');var d=await r.json();
+        if(!d||d.error)return;
+        var t1=document.getElementById('tt-t1-score');var t2=document.getElementById('tt-t2-score');
+        if(t1)t1.textContent=d.team1_games;if(t2)t2.textContent=d.team2_games;
+        if(d.status==='completed')location.reload();}catch(e){}
+      },6000);
+      </script>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ══════ CHESS DETAILED SCORECARD ══════ #}
+    {% if chess_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header" style="background:linear-gradient(135deg,#1a1a1a,#2d2d2d);">
+        <span>♟️</span><span>Chess — {{ chess_state.total_games }}-Game Match</span>
+        {% if chess_state.status == 'completed' %}<span class="psc2-badge-done">FINAL</span>
+        {% else %}<span class="psc2-badge-live">GAME {{ chess_state.current_game }} LIVE</span>{% endif %}
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if chess_state.player1_score > chess_state.player2_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ chess_state.player1 }}</div>
+          <div class="psc2-big-score">{{ chess_state.player1_score }}</div>
+          <div class="psc2-unit">pts</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if chess_state.player2_score > chess_state.player1_score %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ chess_state.player2 }}</div>
+          <div class="psc2-big-score">{{ chess_state.player2_score }}</div>
+          <div class="psc2-unit">pts</div>
+        </div>
+      </div>
+      {% if chess_state.status == 'completed' and chess_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ chess_state.result }}</div>
+      {% endif %}
+      {# Game-by-game results #}
+      {% if chess_state.games %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">Game Results</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:rgba(255,255,255,0.04);">
+              <th style="padding:7px 8px;text-align:center;color:var(--muted);font-size:10px;">Game</th>
+              <th style="padding:7px 8px;text-align:left;color:var(--muted);font-size:10px;">White</th>
+              <th style="padding:7px 8px;text-align:left;color:var(--muted);font-size:10px;">Black</th>
+              <th style="padding:7px 8px;text-align:center;color:var(--muted);font-size:10px;">Moves</th>
+              <th style="padding:7px 8px;text-align:center;color:var(--muted);font-size:10px;">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for g in chess_state.games %}
+            {% if g.result != 'pending' %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:7px 8px;text-align:center;font-weight:700;color:var(--muted);">{{ g.game_no }}</td>
+              <td style="padding:7px 8px;font-weight:700;">{{ g.white_player }}</td>
+              <td style="padding:7px 8px;font-weight:700;">{{ g.black_player }}</td>
+              <td style="padding:7px 8px;text-align:center;color:var(--muted);">{{ g.moves or '—' }}</td>
+              <td style="padding:7px 8px;text-align:center;">
+                {% if g.result == 'white_wins' %}<span style="color:#f5f5f5;font-weight:800;">1–0</span>
+                {% elif g.result == 'black_wins' %}<span style="color:#888;font-weight:800;">0–1</span>
+                {% elif g.result == 'draw' %}<span style="color:#fbbf24;font-weight:800;">½–½</span>
+                {% else %}<span style="color:var(--muted);">{{ g.result }}</span>{% endif %}
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {# ── CHESS BOARD VIEWER ── #}
+      {% if chess_state %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);" id="chessBoardSection">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;">♟️ Live Board</div>
+          {% if chess_state.games %}
+          <div style="display:flex;gap:6px;" id="pubGameTabs">
+            {% for g in chess_state.games %}
+            <button onclick="pubSwitchGame({{ g.id }})"
+              style="padding:4px 10px;border-radius:12px;border:1px solid {% if g.result=='pending' %}#fbbf24{% else %}var(--border){% endif %};
+              background:var(--bg-dark);color:{% if g.result=='pending' %}#fbbf24{% else %}var(--muted){% endif %};
+              cursor:pointer;font-size:11px;font-weight:700;"
+              data-pgid="{{ g.id }}" id="pubTab{{ g.id }}">G{{ g.game_no }}</button>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+          <!-- Board -->
+          <div style="flex:0 0 auto;">
+            <div id="pubBoard" style="display:grid;grid-template-columns:repeat(8,1fr);border:2px solid #555;border-radius:3px;overflow:hidden;width:min(280px,90vw);"></div>
+            <div style="display:flex;margin-top:2px;">
+              {% for f in ['a','b','c','d','e','f','g','h'] %}
+              <div style="flex:1;text-align:center;font-size:10px;color:var(--muted);font-weight:600;">{{ f }}</div>
+              {% endfor %}
+            </div>
+            <div id="pubStatus" style="margin-top:6px;text-align:center;font-size:12px;color:var(--muted);"></div>
+            <div id="pubTurn" style="margin-top:4px;text-align:center;"></div>
+          </div>
+          <!-- Move history -->
+          <div style="flex:1;min-width:140px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Move History</div>
+            <div id="pubMoveList" style="max-height:220px;overflow-y:auto;font-family:monospace;font-size:12px;line-height:1.8;color:var(--text);"></div>
+            <div style="display:flex;gap:4px;margin-top:8px;">
+              <button onclick="pubNav(-999)" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text);cursor:pointer;font-size:13px;">⏮</button>
+              <button onclick="pubNav(-1)" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text);cursor:pointer;font-size:13px;">◀</button>
+              <button onclick="pubNav(1)" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text);cursor:pointer;font-size:13px;">▶</button>
+              <button onclick="pubNav(999)" style="flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text);cursor:pointer;font-size:13px;">⏭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {# ── END CHESS BOARD VIEWER ── #}
+
+    </div>
+    {% endif %}
+
+    {# ══════ CARROM DETAILED SCORECARD ══════ #}
+    {% if carrom_state %}
+    <div class="pro-sport-card" style="margin-bottom:20px;">
+      <div class="psc2-header" style="background:linear-gradient(135deg,#1a0f00,#1c1c2e);">
+        <span>🎯</span><span>Carrom — {{ carrom_state.total_boards }}-Board Match</span>
+        {% if carrom_state.status == 'completed' %}<span class="psc2-badge-done">FINAL</span>
+        {% else %}<span class="psc2-badge-live">BOARD {{ carrom_state.current_board }} LIVE</span>{% endif %}
+        <a href="/carrom/{{ event.id }}" style="margin-left:auto;font-size:11px;font-weight:700;color:#00ffb2;background:rgba(0,200,150,.15);border:1px solid rgba(0,200,150,.35);border-radius:12px;padding:3px 10px;text-decoration:none;">Live View →</a>
+      </div>
+      <div class="psc2-main-score">
+        <div class="psc2-team {% if carrom_state.team1_boards > carrom_state.team2_boards %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ carrom_state.team1 }}</div>
+          {% if carrom_state.team1_players %}<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">{{ carrom_state.team1_players }}</div>{% endif %}
+          <div class="psc2-big-score">{{ carrom_state.team1_boards }}</div>
+          <div class="psc2-unit">boards</div>
+        </div>
+        <div class="psc2-sep">–</div>
+        <div class="psc2-team {% if carrom_state.team2_boards > carrom_state.team1_boards %}psc2-winner{% endif %}">
+          <div class="psc2-team-name">{{ carrom_state.team2 }}</div>
+          {% if carrom_state.team2_players %}<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">{{ carrom_state.team2_players }}</div>{% endif %}
+          <div class="psc2-big-score">{{ carrom_state.team2_boards }}</div>
+          <div class="psc2-unit">boards</div>
+        </div>
+      </div>
+      {# Current board live score #}
+      {% if carrom_state.current_board_obj and carrom_state.status != 'completed' %}{% set cb = carrom_state.current_board_obj %}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--border);">
+        <div style="padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">{{ carrom_state.team1 }}</div>
+          <div style="font-size:24px;font-weight:900;color:#34d399;">{{ cb.team1_score }}</div>
+          <div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{{ [(cb.team1_score/25*100)|int,100]|min }}%;height:100%;background:#10b981;border-radius:2px;"></div></div>
+        </div>
+        <div style="padding:10px 14px;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">{{ carrom_state.team2 }}</div>
+          <div style="font-size:24px;font-weight:900;color:#fbbf24;">{{ cb.team2_score }}</div>
+          <div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{{ [(cb.team2_score/25*100)|int,100]|min }}%;height:100%;background:#f59e0b;border-radius:2px;"></div></div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:5px;font-size:10px;color:var(--muted);border-top:1px solid var(--border);">Board {{ cb.board_no }} · First to 25 wins</div>
+      {% endif %}
+      {% if carrom_state.status == 'completed' and carrom_state.result %}
+      <div style="text-align:center;padding:10px;background:rgba(16,185,129,0.1);border-top:1px solid rgba(16,185,129,0.2);font-weight:800;color:#10b981;">🏆 {{ carrom_state.result }}</div>
+      {% endif %}
+      {# Board-by-board results #}
+      {% if carrom_state.boards %}
+      <div style="padding:14px 16px;border-top:1px solid var(--border);overflow-x:auto;">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Board Scores</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:rgba(255,255,255,0.04);">
+            <th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;">Team</th>
+            {% for b in carrom_state.boards %}<th style="padding:6px 10px;text-align:center;color:var(--muted);font-size:10px;">B{{ b.board_no }}</th>{% endfor %}
+            <th style="padding:6px 10px;text-align:center;color:var(--text);font-size:10px;font-weight:800;">BOARDS WON</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+              <td style="padding:7px 8px;font-weight:800;color:#60a5fa;">{{ carrom_state.team1 }}</td>
+              {% for b in carrom_state.boards %}<td style="padding:7px 10px;text-align:center;font-weight:{% if b.winner==carrom_state.team1 %}900{% else %}600{% endif %};color:{% if b.winner==carrom_state.team1 %}#60a5fa{% else %}var(--text){% endif %};">{{ b.team1_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#60a5fa;font-size:15px;">{{ carrom_state.team1_boards }}</td>
+            </tr>
+            <tr>
+              <td style="padding:7px 8px;font-weight:800;color:#f97316;">{{ carrom_state.team2 }}</td>
+              {% for b in carrom_state.boards %}<td style="padding:7px 10px;text-align:center;font-weight:{% if b.winner==carrom_state.team2 %}900{% else %}600{% endif %};color:{% if b.winner==carrom_state.team2 %}#f97316{% else %}var(--text){% endif %};">{{ b.team2_score }}</td>{% endfor %}
+              <td style="padding:7px 10px;text-align:center;font-weight:900;color:#f97316;font-size:15px;">{{ carrom_state.team2_boards }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ══════════════════════════════════════════
+       POINTS TABLE — shown for all sports
+    ══════════════════════════════════════════ #}
+    {% set any_state = cricket_state or kabaddi_state or football_state or basketball_state or volleyball_state or badminton_state or chess_state or carrom_state %}
+    {% if any_state %}
+    {% set t1_name = event.team1 %}
+    {% set t2_name = event.team2 %}
+
+    {# Determine winner / draw for each sport #}
+    {% set t1_win = false %}
+    {% set t2_win = false %}
+    {% set is_draw = false %}
+    {% set match_done = false %}
+
+    {% if cricket_state %}
+      {% set match_done = (cricket_state.status == 'completed') %}
+      {% if match_done and cricket_state.result %}
+        {% if event.team1 in cricket_state.result and 'won' in cricket_state.result %}{% set t1_win = true %}
+        {% elif event.team2 in cricket_state.result and 'won' in cricket_state.result %}{% set t2_win = true %}
+        {% elif 'tie' in cricket_state.result|lower or 'draw' in cricket_state.result|lower %}{% set is_draw = true %}
+        {% endif %}
+      {% endif %}
+
+    {% elif kabaddi_state %}
+      {% set match_done = (kabaddi_state.status == 'completed') %}
+      {% if match_done %}
+        {% if kabaddi_state.team1_score > kabaddi_state.team2_score %}{% set t1_win = true %}
+        {% elif kabaddi_state.team2_score > kabaddi_state.team1_score %}{% set t2_win = true %}
+        {% else %}{% set is_draw = true %}{% endif %}
+      {% endif %}
+
+    {% elif football_state %}
+      {% set match_done = (football_state.status == 'completed') %}
+      {% if match_done %}
+        {% if football_state.team1_score > football_state.team2_score %}{% set t1_win = true %}
+        {% elif football_state.team2_score > football_state.team1_score %}{% set t2_win = true %}
+        {% else %}{% set is_draw = true %}{% endif %}
+      {% endif %}
+
+    {% elif basketball_state %}
+      {% set match_done = (basketball_state.status == 'completed') %}
+      {% if match_done %}
+        {% if basketball_state.team1_score > basketball_state.team2_score %}{% set t1_win = true %}
+        {% elif basketball_state.team2_score > basketball_state.team1_score %}{% set t2_win = true %}
+        {% else %}{% set is_draw = true %}{% endif %}
+      {% endif %}
+
+    {% elif volleyball_state %}
+      {% set match_done = (volleyball_state.status == 'completed') %}
+      {% if match_done %}
+        {% if volleyball_state.team1_sets > volleyball_state.team2_sets %}{% set t1_win = true %}
+        {% elif volleyball_state.team2_sets > volleyball_state.team1_sets %}{% set t2_win = true %}
+        {% else %}{% set is_draw = true %}{% endif %}
+      {% endif %}
+
+    {% elif badminton_state %}
+      {% set match_done = (badminton_state.status == 'completed') %}
+      {% if match_done %}
+        {% if badminton_state.team1_games > badminton_state.team2_games %}{% set t1_win = true %}
+        {% elif badminton_state.team2_games > badminton_state.team1_games %}{% set t2_win = true %}
+        {% else %}{% set is_draw = true %}{% endif %}
+      {% endif %}
+
+    {% elif chess_state %}
+      {% set t1_name = chess_state.player1 %}
+      {% set t2_name = chess_state.player2 %}
+      {% set match_done = (chess_state.status == 'completed') %}
+      {% if match_done %}
+        {% if chess_state.player1_score > chess_state.player2_score %}{% set t1_win = true %}
+        {% elif chess_state.player2_score > chess_state.player1_score %}{% set t2_win = true %}
+        {% else %}{% set is_draw = true %}{% endif %}
+      {% endif %}
+
+    {% elif carrom_state %}
+      {% set match_done = (carrom_state.status == 'completed') %}
+      {% if match_done %}
+        {% if carrom_state.team1_boards > carrom_state.team2_boards %}{% set t1_win = true %}
+        {% elif carrom_state.team2_boards > carrom_state.team1_boards %}{% set t2_win = true %}
+        {% else %}{% set is_draw = true %}{% endif %}
+      {% endif %}
+    {% endif %}
+
+    {# Compute points: Win=3, Draw=1, Loss=0 #}
+    {% set t1_pts = 3 if t1_win else (1 if is_draw else 0) %}
+    {% set t2_pts = 3 if t2_win else (1 if is_draw else 0) %}
+    {% set t1_w = 1 if t1_win else 0 %}
+    {% set t2_w = 1 if t2_win else 0 %}
+    {% set t1_d = 1 if is_draw else 0 %}
+    {% set t2_d = 1 if is_draw else 0 %}
+    {% set t1_l = 1 if t2_win else 0 %}
+    {% set t2_l = 1 if t1_win else 0 %}
+    {% set t1_p = 1 if match_done else 0 %}
+    {% set t2_p = 1 if match_done else 0 %}
+
+    <div class="pts-table-wrap" style="margin-top:20px;margin-bottom:20px;">
+      <div class="pts-table-header">
+        <span class="pts-table-icon">📋</span>
+        <span class="pts-table-title">Points Table</span>
+        {% if not match_done %}<span class="pts-table-badge-live">{{ event.status|upper }}</span>
+        {% else %}<span class="pts-table-badge-done">COMPLETED</span>{% endif %}
+      </div>
+      <div class="pts-table-scroll">
+        <table class="pts-table">
+          <thead>
+            <tr>
+              <th class="pts-th pts-th-team">Team</th>
+              <th class="pts-th">P</th>
+              <th class="pts-th">W</th>
+              <th class="pts-th">D</th>
+              <th class="pts-th">L</th>
+              <th class="pts-th pts-th-pts">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {# Row order: winner first if match done #}
+            {% if t2_win %}
+              {# Team 2 won — show T2 first #}
+              <tr class="pts-row pts-row-winner">
+                <td class="pts-td pts-td-team">
+                  <span class="pts-trophy">🏆</span>
+                  <span class="pts-team-name">{{ t2_name }}</span>
+                </td>
+                <td class="pts-td pts-td-num">{{ t2_p }}</td>
+                <td class="pts-td pts-td-num pts-win">{{ t2_w }}</td>
+                <td class="pts-td pts-td-num">{{ t2_d }}</td>
+                <td class="pts-td pts-td-num pts-loss">{{ t2_l }}</td>
+                <td class="pts-td pts-td-num pts-pts-cell">{{ t2_pts }}</td>
+              </tr>
+              <tr class="pts-row">
+                <td class="pts-td pts-td-team">
+                  <span class="pts-rank">2</span>
+                  <span class="pts-team-name">{{ t1_name }}</span>
+                </td>
+                <td class="pts-td pts-td-num">{{ t1_p }}</td>
+                <td class="pts-td pts-td-num pts-win">{{ t1_w }}</td>
+                <td class="pts-td pts-td-num">{{ t1_d }}</td>
+                <td class="pts-td pts-td-num pts-loss">{{ t1_l }}</td>
+                <td class="pts-td pts-td-num pts-pts-cell">{{ t1_pts }}</td>
+              </tr>
+            {% else %}
+              {# Team 1 won or draw or upcoming — T1 first #}
+              <tr class="pts-row {% if t1_win %}pts-row-winner{% endif %}">
+                <td class="pts-td pts-td-team">
+                  {% if t1_win %}<span class="pts-trophy">🏆</span>{% else %}<span class="pts-rank">1</span>{% endif %}
+                  <span class="pts-team-name">{{ t1_name }}</span>
+                </td>
+                <td class="pts-td pts-td-num">{{ t1_p }}</td>
+                <td class="pts-td pts-td-num pts-win">{{ t1_w }}</td>
+                <td class="pts-td pts-td-num">{{ t1_d }}</td>
+                <td class="pts-td pts-td-num pts-loss">{{ t1_l }}</td>
+                <td class="pts-td pts-td-num pts-pts-cell">{{ t1_pts }}</td>
+              </tr>
+              <tr class="pts-row {% if t2_win %}pts-row-winner{% endif %}">
+                <td class="pts-td pts-td-team">
+                  {% if t2_win %}<span class="pts-trophy">🏆</span>{% elif is_draw %}<span class="pts-rank">1</span>{% else %}<span class="pts-rank">2</span>{% endif %}
+                  <span class="pts-team-name">{{ t2_name }}</span>
+                </td>
+                <td class="pts-td pts-td-num">{{ t2_p }}</td>
+                <td class="pts-td pts-td-num pts-win">{{ t2_w }}</td>
+                <td class="pts-td pts-td-num">{{ t2_d }}</td>
+                <td class="pts-td pts-td-num pts-loss">{{ t2_l }}</td>
+                <td class="pts-td pts-td-num pts-pts-cell">{{ t2_pts }}</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <div class="pts-table-legend">
+        <span>P = Played</span><span>W = Won</span><span>D = Draw</span><span>L = Lost</span><span>Pts = Points (W=3, D=1, L=0)</span>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Team rosters #}
+    <div id="team-rosters-section" style="margin-top:20px;"></div>
+    <script>
+    (function(){
+      fetch('/api/event/{{ event.id }}/players')
+        .then(r=>r.json())
+        .then(function(data){
+          var t1=(data.team1&&data.team1.main)||[];
+          var t2=(data.team2&&data.team2.main)||[];
+          if(!t1.length&&!t2.length)return;
+          function renderTeam(players,name){
+            var html='<div style="flex:1;min-width:200px;"><div style="font-weight:800;font-size:14px;color:var(--text);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">'+name+'</div>';
+            html+=players.map(function(p,i){return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px;"><span style="background:rgba(74,158,255,0.1);border-radius:4px;padding:1px 6px;font-size:10px;color:#4a9eff;font-weight:700;">'+(i+1)+'</span><span style="flex:1;font-weight:600;">'+p.player_name+'</span><span style="font-size:11px;color:var(--muted);">'+p.role+'</span></div>';}).join('');
+            html+='</div>';return html;
+          }
+          var s=document.getElementById('team-rosters-section');
+          s.innerHTML='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">👥 Team Rosters</div><div style="display:flex;gap:20px;flex-wrap:wrap;">'+renderTeam(t1,'{{ event.team1 }}')+renderTeam(t2,'{{ event.team2 }}')+'</div></div>';
+        }).catch(function(){});
+    })();
+    </script>
+
+    {# Registration section #}
+    <div class="event-register-box">
+      <h3>Register for this Event</h3>
+      {% if user %}
+        {% if user_registration %}
+          <div class="reg-status">✅ You're registered — {{ user_registration.status }}</div>
+        {% elif event.status == 'upcoming' %}
+          {% if event.max_registrations == 0 or event.reg_count < event.max_registrations %}
+          <form method="POST" action="/event/{{ event.id }}/register">
+            <div class="form-group">
+              <label>Team Name</label>
+              <input type="text" name="team_name" placeholder="Your team or player name" required pattern="[A-Za-z0-9 ]+" title="Team name: letters, numbers and spaces only" oninput="this.value=this.value.replace(/[^A-Za-z0-9 ]/g,'')"/>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Register Now</button>
+          </form>
+          {% else %}
+            <div class="full-notice">Registration is full ({{ event.reg_count }}/{{ event.max_registrations }})</div>
+          {% endif %}
+        {% else %}
+          <p style="color:var(--muted2);font-size:14px;">Registrations are closed for this event.</p>
+        {% endif %}
+      {% else %}
+        <div class="login-prompt">
+          <span style="color:var(--muted2);font-size:14px;">Want to register?</span>
+          <a href="/login" class="btn btn-primary btn-sm">Sign In</a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{# ══════ GOOGLE WIDGET CSS ══════ #}
+<style>
+/* ── GCW WRAPPER ── */
+.gcw-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  background: #1c1c1e;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+.gcw-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.gcw-breadcrumb {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9aa0a6;
+}
+.gcw-pill-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  color: #bdc1c6;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all .15s;
+  text-decoration: none;
+}
+.gcw-pill-btn:hover { background: rgba(255,255,255,0.06); color: #e8eaed; text-decoration: none; }
+
+/* ── MAIN SCORE BLOCK ── */
+.gcw-score-block {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  align-items: center;
+  padding: 20px 16px 16px;
+  gap: 8px;
+}
+.gcw-team { display: flex; flex-direction: column; }
+.gcw-team-right { align-items: flex-end; }
+.gcw-flag { font-size: 32px; line-height: 1; margin-bottom: 4px; }
+.gcw-score-num {
+  font-family: var(--font-cond);
+  font-size: 42px;
+  font-weight: 900;
+  color: #e8eaed;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.gcw-wkts {
+  font-size: 28px;
+  font-weight: 700;
+  color: #9aa0a6;
+}
+.gcw-overs {
+  font-size: 13px;
+  color: #80868b;
+  margin-top: 2px;
+}
+.gcw-team-name {
+  font-family: var(--font-cond);
+  font-size: 20px;
+  font-weight: 800;
+  color: #bdc1c6;
+  margin-top: 4px;
+  letter-spacing: .5px;
+}
+.gcw-center { text-align: center; }
+.gcw-live-lbl {
+  font-size: 15px;
+  font-weight: 700;
+  color: #34a853;
+  letter-spacing: .2px;
+}
+.gcw-live-dot {
+  width: 8px; height: 8px;
+  background: #34a853;
+  border-radius: 50%;
+  margin: 5px auto 0;
+  box-shadow: 0 0 8px rgba(52,168,83,0.6);
+  animation: gcw-glow 1.4s infinite;
+}
+@keyframes gcw-glow {
+  0%,100% { opacity:1; box-shadow:0 0 8px rgba(52,168,83,.6); }
+  50%       { opacity:.3; box-shadow:0 0 3px rgba(52,168,83,.2); }
+}
+
+/* ── STATUS LINES ── */
+.gcw-status-line {
+  text-align: center;
+  font-size: 13px;
+  color: #bdc1c6;
+  padding: 0 16px 4px;
+  line-height: 1.5;
+}
+.gcw-status-line strong { color: #e8eaed; }
+.gcw-sub-line {
+  text-align: center;
+  font-size: 12px;
+  color: #80868b;
+  padding: 0 16px 14px;
+}
+
+/* ── PLAYERS ROW ── */
+.gcw-players-row {
+  display: flex;
+  gap: 0;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.gcw-players-col { flex: 1; min-width: 0; }
+.gcw-players-right { text-align: right; }
+.gcw-col-label {
+  font-size: 11px;
+  color: #5f6368;
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-transform: none;
+}
+.gcw-col-right { text-align: right; }
+.gcw-player-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 5px;
+  font-size: 13px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.gcw-player-right {
+  justify-content: flex-end;
+}
+.gcw-player-name {
+  font-weight: 600;
+  color: #e8eaed;
+  min-width: 0;
+  flex-shrink: 1;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.gcw-player-stat { color: #9aa0a6; font-size: 12px; }
+.gcw-player-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #3c4043;
+  flex-shrink: 0;
+}
+.gcw-dot-active { background: #4a9eff; box-shadow: 0 0 5px rgba(74,158,255,.5); }
+
+/* ── BALL CHIPS ── */
+.gcw-balls-wrap {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.gcw-balls-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+}
+.gcw-balls-row::-webkit-scrollbar { display: none; }
+.gcw-ball {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  font-family: var(--font-cond);
+}
+.gcw-ball-dot { background: #2c2c2e; color: #9aa0a6; font-size: 16px; }
+.gcw-ball-n   { background: #3a3a3c; color: #e8eaed; }
+.gcw-ball-4   { background: rgba(0,200,150,0.25); color: #4a9eff; border: 1.5px solid rgba(0,200,150,0.5); }
+.gcw-ball-6   { background: rgba(52,168,83,0.22); color: #34a853; border: 1.5px solid rgba(52,168,83,0.45); }
+.gcw-ball-w   { background: rgba(234,67,53,0.22); color: #ea4335; border: 1.5px solid rgba(234,67,53,0.4); }
+.gcw-ball-over-num {
+  font-size: 11px;
+  color: #5f6368;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+.gcw-ball-sep { width: 1px; height: 20px; background: #3c4043; flex-shrink: 0; }
+
+/* ── TABS ── */
+.gcw-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gcw-tabs::-webkit-scrollbar { display: none; }
+.gcw-tab {
+  padding: 12px 18px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #9aa0a6;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  transition: all .15s;
+  font-family: var(--font);
+}
+.gcw-tab:hover { color: #e8eaed; }
+.gcw-tab-active {
+  color: #e8eaed;
+  border-bottom-color: #e8eaed;
+}
+
+/* ── PANES ── */
+.gcw-pane { }
+.gcw-pane-hidden { display: none; }
+
+/* Stats strip inside pane */
+.gcw-stats-strip {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.gcw-stat-cell {
+  flex: 1;
+  text-align: center;
+  padding: 14px 8px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.gcw-stat-cell:last-child { border-right: none; }
+.gcw-stat-lbl { font-size: 11px; color: #80868b; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.gcw-stat-val { font-family: var(--font-cond); font-size: 22px; font-weight: 800; color: #e8eaed; line-height: 1; }
+
+.gcw-refresh-note {
+  text-align: center;
+  font-size: 12px;
+  color: #5f6368;
+  padding: 10px 16px 14px;
+}
+
+/* Scorecard inside gcw */
+.gcw-sc-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,.02);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  font-family: var(--font-cond);
+  font-size: 16px;
+  font-weight: 800;
+  color: #e8eaed;
+  gap: 8px;
+}
+.gcw-sc-sub-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a9eff;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 9px 16px 5px;
+}
+.gcw-sc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.gcw-sc-table th {
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: #80868b;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.01);
+  white-space: nowrap;
+}
+.gcw-sc-table th:not(:first-child):not(:nth-child(2)) { text-align: right; }
+.gcw-sc-name { padding: 8px 10px; font-weight: 600; color: #e8eaed; white-space: nowrap; }
+.gcw-sc-dismiss { padding: 8px 10px; font-size: 12px; color: #80868b; max-width: 160px; }
+.gcw-sc-num { padding: 8px 10px; text-align: right; font-variant-numeric: tabular-nums; border-bottom: 1px solid rgba(255,255,255,.03); }
+.gcw-sc-total td { background: rgba(74,158,255,.04); border-top: 1px solid rgba(74,158,255,.12); font-size: 12px; padding: 8px 10px; }
+.gcw-sr-hot { color: #ea4335; font-weight: 700; }
+.gcw-sr-ok  { color: #34a853; }
+.gcw-eco-good { color: #34a853; font-weight: 700; }
+.gcw-eco-bad  { color: #ea4335; }
+.gcw-badge-century { background:rgba(251,188,4,.18);color:#fbbc04;border-radius:3px;padding:1px 5px;font-size:10px;margin-left:4px; }
+.gcw-badge-fifty   { background:rgba(251,188,4,.1);color:#fbbc04;border-radius:3px;padding:1px 4px;font-size:10px;margin-left:4px;font-weight:800; }
+.gcw-badge-fifer   { background:rgba(234,67,53,.14);color:#ea4335;border-radius:3px;padding:1px 5px;font-size:10px;margin-left:4px;font-weight:800; }
+
+/* Highlights in stats pane */
+.gcw-highlight-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.gcw-hl-bat  { background: rgba(251,188,4,.06); border: 1px solid rgba(251,188,4,.15); }
+.gcw-hl-bowl { background: rgba(168,85,247,.06); border: 1px solid rgba(168,85,247,.15); }
+.gcw-hl-icon { font-size: 20px; }
+.gcw-hl-lbl  { font-size: 10px; color: #80868b; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; margin-bottom: 1px; }
+.gcw-hl-name { font-family: var(--font-cond); font-size: 14px; font-weight: 800; color: #e8eaed; margin-bottom: 2px; }
+.gcw-hl-stat { font-size: 12px; color: #9aa0a6; }
+
+/* ── ACTION BUTTONS ── */
+.gcw-actions {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-wrap: wrap;
+}
+.gcw-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 24px;
+  color: #bdc1c6;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all .15s;
+  text-decoration: none;
+}
+.gcw-action-btn:hover { background: rgba(255,255,255,0.05); color: #e8eaed; text-decoration: none; }
+
+/* Responsive */
+@media (max-width:480px) {
+  .gcw-score-num { font-size: 34px; }
+  .gcw-wkts { font-size: 22px; }
+  .gcw-team-name { font-size: 16px; }
+  .gcw-score-block { padding: 14px 12px 12px; }
+  .gcw-flag { font-size: 24px; }
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+{% if event.status == "live" %}
+<script>
+let c=5;const t=setInterval(()=>{c--;const e=document.getElementById("refresh-countdown");if(e)e.textContent=c;if(c<=0){clearInterval(t);location.reload();}},1000);
+</script>
+{% endif %}
+
+{% if cricket_state %}
+<script>
+(function(){
+  const MID = {{ cricket_state.id }};
+  const COLORS = ['#1a73e8','#ea4335'];
+  const STATUS = '{{ event.status }}';
+
+  function drawOverChart(svgId, loadingId, legendId, innings) {
+    const wrap = document.getElementById(svgId);
+    const loading = document.getElementById(loadingId);
+    const legend = document.getElementById(legendId);
+    if (!wrap) return;
+    let maxOvers = 0;
+    innings.forEach(inn => { if (inn.overs) maxOvers = Math.max(maxOvers, inn.overs.length); });
+    if (!maxOvers) { if(loading){loading.textContent='No overs yet.';loading.style.display='';} return; }
+    if(loading) loading.style.display='none';
+    let maxRuns=1;
+    innings.forEach(inn=>{(inn.overs||[]).forEach(o=>{if(o.runs>maxRuns)maxRuns=o.runs;});});
+    maxRuns=Math.max(maxRuns,8);
+    const W=Math.max(wrap.clientWidth||340,280);
+    const H=120,padL=22,padB=18,padT=8,padR=6;
+    const chartW=W-padL-padR,chartH=H-padT-padB;
+    const groupW=chartW/maxOvers;
+    const barW=Math.min(Math.max(groupW*0.4,3),16);
+    let bars='',xLabels='',yLines='';
+    innings.forEach((inn,innIdx)=>{
+      const offset=innings.length>1?(innIdx===0?-barW/2-1:barW/2+1):0;
+      (inn.overs||[]).forEach((o,i)=>{
+        const bh=Math.max(2,(o.runs/maxRuns)*chartH);
+        const x=padL+(i+0.5)*groupW+offset-barW/2;
+        const y=padT+chartH-bh;
+        const col=COLORS[innIdx%COLORS.length];
+        bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${bh.toFixed(1)}" fill="${col}" rx="2" opacity="0.8"><title>Over ${o.over} · ${inn.batting_team}: ${o.runs} runs</title></rect>`;
+        if(o.runs>0&&barW>10)bars+=`<text x="${(x+barW/2).toFixed(1)}" y="${(y-2).toFixed(1)}" text-anchor="middle" font-size="8" fill="${col}">${o.runs}</text>`;
+      });
+    });
+    [0,.5,1].forEach(frac=>{
+      const y=padT+chartH*(1-frac);
+      yLines+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#2c2c2e" stroke-width="1"/>`;
+      yLines+=`<text x="${(padL-3).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#5f6368">${Math.round(maxRuns*frac)}</text>`;
+    });
+    for(let i=0;i<maxOvers;i++){
+      const x=padL+(i+0.5)*groupW;
+      if(i%2===0||maxOvers<=10)xLabels+=`<text x="${x.toFixed(1)}" y="${(H-3).toFixed(1)}" text-anchor="middle" font-size="9" fill="#5f6368">${i+1}</text>`;
+    }
+    wrap.innerHTML=`<svg width="${W}" height="${H}" style="display:block;">${yLines}${bars}${xLabels}</svg>`;
+    if(legend){
+      legend.innerHTML=innings.map((inn,i)=>`<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:${COLORS[i]};border-radius:2px;display:inline-block;"></span><span style="color:#9aa0a6;">${inn.batting_team}</span></span>`).join('');
+      legend.style.display='flex';
+    }
+  }
+
+  fetch('/api/match/'+MID+'/overs')
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d.innings||!d.innings.length)return;
+      if(STATUS==='live') {
+        drawOverChart('live-over-chart-svg','live-over-chart-loading','live-over-chart-legend',d.innings);
+      } else {
+        // Draw in gcw-wrap overview pane (inline)
+        drawOverChart('comp-over-chart-svg-inline','live-over-chart-loading','comp-over-chart-legend-inline',d.innings);
+        // Also draw in pro-scorecard below if it exists
+        drawOverChart('comp-over-chart-svg','comp-over-chart-loading','comp-over-chart-legend',d.innings);
+      }
+    }).catch(()=>{});
+
+  // ── Public Wagon Wheel & Analysis ────────────────────
+  let _pubDeliveries = [];
+
+  function drawPublicWagonWheel(deliveries) {
+    const canvas = document.getElementById('pub-wagon-wheel');
+    const loading = document.getElementById('pub-ww-loading');
+    if (!canvas) return;
+    if (loading) loading.style.display = 'none';
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W/2, cy = H/2, R = W/2 - 10;
+    ctx.clearRect(0,0,W,H);
+
+    // Background field
+    const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+    grad.addColorStop(0,'#1a3a2a'); grad.addColorStop(1,'#0d2018');
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fillStyle=grad; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=2; ctx.stroke();
+
+    [0.35,0.65,1].forEach(r=>{
+      ctx.beginPath(); ctx.arc(cx,cy,R*r,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.stroke();
+    });
+    for(let a=0;a<360;a+=30){
+      const rad=(a-90)*Math.PI/180;
+      ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+R*Math.cos(rad),cy+R*Math.sin(rad));
+      ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1; ctx.stroke();
+    }
+
+    // Zone labels
+    const zones=[{a:0,l:'Mid On'},{a:60,l:'Cover'},{a:120,l:'Point'},{a:180,l:'3rd Man'},{a:-60,l:'Mid Off'},{a:-120,l:'Sq Leg'}];
+    ctx.font='bold 8px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    zones.forEach(z=>{
+      const rad=(z.a-90)*Math.PI/180;
+      ctx.fillStyle='rgba(255,255,255,0.25)';
+      ctx.fillText(z.l, cx+(R*0.78)*Math.cos(rad), cy+(R*0.78)*Math.sin(rad));
+    });
+
+    // Pitch
+    ctx.fillStyle='rgba(255,255,255,0.1)';
+    ctx.fillRect(cx-5,cy-R*0.28,10,R*0.56);
+    // Batsman
+    ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+
+    const delivered = deliveries.filter(d => !d.extra_type || !['wide','no_ball'].includes(d.extra_type));
+    if (!delivered.length) {
+      ctx.fillStyle='rgba(255,255,255,0.3)';
+      ctx.font='12px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('No deliveries yet',cx,cy);
+      return;
+    }
+
+    delivered.forEach((d,idx)=>{
+      const runs = (d.runs||0) + (d.extra_runs||0);
+      if (runs===0 && !d.is_wicket) return;
+      let angleDeg;
+      const hasReal = d.shot_direction !== null && d.shot_direction !== undefined && String(d.shot_direction) !== '';
+      if (hasReal) {
+        angleDeg = parseFloat(d.shot_direction);
+      } else {
+        const seed=(idx*137.5+(d.over_no||0)*31+(d.ball_no||0)*7)%360;
+        angleDeg=seed-180;
+      }
+      const angleRad=(angleDeg-90)*Math.PI/180;
+      let dist, color, lineW;
+      if (d.is_wicket) { color='rgba(239,68,68,0.85)'; dist=0.45; lineW=1.5; }
+      else if (runs>=6) { color=hasReal?'rgba(250,204,21,0.95)':'rgba(197,110,248,0.9)'; dist=0.9; lineW=2.5; }
+      else if (runs===4) { color=hasReal?'rgba(250,204,21,0.95)':'rgba(0,200,150,0.9)'; dist=0.85; lineW=2; }
+      else if (runs>=1) { color='rgba(16,185,129,0.8)'; dist=0.35+runs*0.08; lineW=1; }
+      else { color='rgba(255,255,255,0.12)'; dist=0.2; lineW=1; }
+
+      const ex=cx+R*dist*Math.cos(angleRad), ey=cy+R*dist*Math.sin(angleRad);
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ex,ey);
+      ctx.strokeStyle=color; ctx.lineWidth=lineW; ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex,ey,runs>=4?5:3,0,Math.PI*2);
+      ctx.fillStyle=color; ctx.fill();
+
+      // Gold glow for real-direction boundaries
+      if (hasReal && (runs>=4||d.is_wicket)) {
+        ctx.beginPath(); ctx.arc(ex,ey,9,0,Math.PI*2);
+        ctx.strokeStyle='rgba(250,204,21,0.35)'; ctx.lineWidth=2; ctx.stroke();
+      }
+    });
+  }
+
+  function renderPublicRunDist(deliveries) {
+    const container = document.getElementById('pub-run-dist');
+    const loading = document.getElementById('pub-run-dist-loading');
+    if (!container) return;
+    if (loading) loading.style.display='none';
+    const counts={0:0,1:0,2:0,3:0,4:0,6:0,W:0};
+    deliveries.forEach(d=>{
+      if(d.is_wicket){counts.W++;return;}
+      const r=d.runs||0;
+      if(r in counts) counts[r]++; else counts[0]++;
+    });
+    const total=Object.values(counts).reduce((a,b)=>a+b,0)||1;
+    const labels={0:'Dots',1:'Singles',2:'Twos',3:'Threes',4:'Fours',6:'Sixes',W:'Wickets'};
+    const colors={0:'rgba(255,255,255,.18)',1:'rgba(16,185,129,.6)',2:'rgba(16,185,129,.8)',3:'rgba(251,191,36,.6)',4:'rgba(0,200,150,.85)',6:'rgba(197,110,248,.9)',W:'rgba(239,68,68,.85)'};
+    container.innerHTML=Object.keys(counts).map(k=>{
+      const pct=((counts[k]/total)*100).toFixed(0);
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+        <div style="width:62px;font-size:11px;color:var(--muted2);flex-shrink:0;">${labels[k]} <span style="color:var(--muted);">(${counts[k]})</span></div>
+        <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${colors[k]};border-radius:4px;transition:width .5s;"></div>
+        </div>
+        <div style="width:28px;font-size:11px;color:var(--muted2);text-align:right;">${pct}%</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderPublicBatterBowler(deliveries) {
+    // Per-batsman: runs, balls, 4s, 6s
+    const bMap={};
+    deliveries.forEach(d=>{
+      if(!d.batsman) return;
+      if(!bMap[d.batsman]) bMap[d.batsman]={runs:0,balls:0,fours:0,sixes:0};
+      const isValid = !d.extra_type||!['wide','no_ball'].includes(d.extra_type);
+      if(isValid) bMap[d.batsman].balls++;
+      if(!['wide','bye','leg_bye'].includes(d.extra_type||'')) bMap[d.batsman].runs+=d.runs||0;
+      if((d.runs||0)===4) bMap[d.batsman].fours++;
+      if((d.runs||0)===6) bMap[d.batsman].sixes++;
+    });
+    const batters=Object.entries(bMap).sort((a,b)=>b[1].runs-a[1].runs).slice(0,5);
+    const bEl=document.getElementById('pub-batter-list');
+    if(bEl && batters.length){
+      const maxR=Math.max(...batters.map(b=>b[1].runs),1);
+      bEl.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Batters (top 5)</div>`+
+        batters.map(([name,s])=>{
+          const sr=s.balls?((s.runs/s.balls)*100).toFixed(0):0;
+          const pct=(s.runs/maxR*100).toFixed(0);
+          const srColor=sr>=150?'#c56ef8':sr>=100?'#10b981':'#f59e0b';
+          return `<div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
+              <span style="color:var(--text);font-weight:600;">${name}</span>
+              <span style="color:var(--muted2);">${s.runs}(${s.balls}) · SR <span style="color:${srColor}">${sr}</span> · ${s.fours}×4 ${s.sixes}×6</span>
+            </div>
+            <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:3px;"></div>
+            </div>
+          </div>`;
+        }).join('');
+    }
+    // Per-bowler
+    const bwMap={};
+    deliveries.forEach(d=>{
+      if(!d.bowler) return;
+      if(!bwMap[d.bowler]) bwMap[d.bowler]={runs:0,balls:0,wickets:0};
+      const isValid=!d.extra_type||!['wide','no_ball'].includes(d.extra_type||'');
+      if(isValid) bwMap[d.bowler].balls++;
+      const br=(d.runs||0)+(d.extra_runs||0);
+      if(!['bye','leg_bye'].includes(d.extra_type||'')) bwMap[d.bowler].runs+=br;
+      if(d.is_wicket) bwMap[d.bowler].wickets++;
+    });
+    const bowlers=Object.entries(bwMap).sort((a,b)=>b[1].wickets-a[1].wickets||a[1].runs-b[1].runs).slice(0,4);
+    const bwEl=document.getElementById('pub-bowler-list');
+    if(bwEl && bowlers.length){
+      bwEl.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Bowlers (top 4)</div>`+
+        bowlers.map(([name,s])=>{
+          const ovs=`${Math.floor(s.balls/6)}.${s.balls%6}`;
+          const eco=s.balls?(s.runs/(s.balls/6)).toFixed(2):'0.00';
+          const ecoColor=parseFloat(eco)<6?'#10b981':parseFloat(eco)<9?'#f59e0b':'#ef4444';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">
+            <span style="color:var(--text);font-weight:600;">${name}</span>
+            <span style="color:var(--muted2);">${ovs} ov · ${s.wickets}w/${s.runs}r · Eco <span style="color:${ecoColor}">${eco}</span></span>
+          </div>`;
+        }).join('');
+    }
+  }
+
+  function loadPublicStats() {
+    fetch('/api/match/'+MID+'/deliveries')
+      .then(r=>r.json())
+      .then(d=>{
+        _pubDeliveries = d.deliveries||[];
+        drawPublicWagonWheel(_pubDeliveries);
+        renderPublicRunDist(_pubDeliveries);
+        renderPublicBatterBowler(_pubDeliveries);
+      }).catch(()=>{
+        const l=document.getElementById('pub-ww-loading');
+        if(l){l.textContent='Could not load data.';l.style.display='block';}
+      });
+  }
+
+  // Expose loadPublicStats globally for gcwTab to call
+  window.loadPublicStats = loadPublicStats;
+  // Auto-load: immediately for completed matches (data is final), or after 2s if Stats pane already visible
+  if (STATUS !== 'live') {
+    // Completed match — pre-load stats so Stats tab is instant
+    loadPublicStats();
+    window._pubStatsLoaded = true;
+  } else {
+    // Live match — lazy-load only if Stats pane visible on load
+    setTimeout(()=>{ const s=document.getElementById('gcw-pane-stats'); if(s&&!s.classList.contains('gcw-pane-hidden')&&!window._pubStatsLoaded){ window._pubStatsLoaded=true; loadPublicStats(); } }, 2000);
+  }
+
+})();
+</script>
+{% endif %}
+
+
+{% if chess_state %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+(function(){
+const PUB_EID = {{ event.id }};
+const PUB_GAMES = {{ chess_state.games | tojson }};
+const PUB_MATCH_STATUS = {{ chess_state.status | tojson }};
+const PM = {wK:'♔',wQ:'♕',wR:'♖',wB:'♗',wN:'♘',wP:'♙',bK:'♚',bQ:'♛',bR:'♜',bB:'♝',bN:'♞',bP:'♟'};
+
+let pubChess = null, pubMoves = [], pubViewIdx = -1, pubGid = null;
+let pubLastMv = null, pubPolling = null;
+
+function pubInit() {
+  if (!PUB_GAMES.length) return;
+  // Default to first pending game, or last game
+  const active = PUB_GAMES.find(g => g.result === 'pending') || PUB_GAMES[PUB_GAMES.length-1];
+  pubSwitchGame(active.id);
+}
+
+window.pubSwitchGame = function(gid) {
+  pubGid = gid;
+  document.querySelectorAll('[id^="pubTab"]').forEach(b => {
+    const active = parseInt(b.dataset.pgid) === gid;
+    b.style.background = active ? 'var(--accent)' : 'var(--bg-dark)';
+    b.style.color = active ? '#fff' : 'var(--muted)';
+    b.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+  });
+  pubLoadMoves(gid);
+};
+
+async function pubLoadMoves(gid) {
+  try {
+    const r = await fetch('/api/chess/'+PUB_EID+'/game/'+gid+'/moves');
+    const d = await r.json();
+    pubMoves = d.moves || [];
+  } catch(e) { pubMoves = []; }
+  pubViewIdx = pubMoves.length - 1;
+  pubReplay(pubViewIdx);
+  pubRenderMoveList();
+  // Start polling for live games
+  const g = PUB_GAMES.find(x=>x.id===gid);
+  if (pubPolling) clearInterval(pubPolling);
+  if (g && g.result === 'pending' && PUB_MATCH_STATUS !== 'completed') {
+    pubPolling = setInterval(pubPollLive, 3000);
+  }
+}
+
+async function pubPollLive() {
+  try {
+    const r = await fetch('/api/chess/'+PUB_EID+'/live');
+    const d = await r.json();
+    if (!d.current_moves) return;
+    const newMoves = d.current_moves;
+    if (newMoves.length > pubMoves.length) {
+      const wasAtEnd = pubViewIdx >= pubMoves.length - 1;
+      pubMoves = newMoves;
+      if (wasAtEnd) {
+        pubViewIdx = pubMoves.length - 1;
+        pubReplay(pubViewIdx);
+        pubRenderMoveList();
+      }
+    }
+  } catch(e) {}
+}
+
+function pubReplay(idx) {
+  pubChess = new Chess();
+  pubLastMv = null;
+  const toPlay = idx < 0 ? [] : pubMoves.slice(0, idx+1);
+  for (const mv of toPlay) {
+    const r = pubChess.move(mv.san);
+    if (r) pubLastMv = {from:r.from, to:r.to};
+  }
+  pubViewIdx = toPlay.length - 1;
+  pubRenderBoard();
+  pubUpdateStatus();
+}
+
+function pubRenderBoard() {
+  const board = document.getElementById('pubBoard');
+  if (!board || !pubChess) return;
+  board.innerHTML = '';
+  const sqSize = Math.floor(Math.min(280, window.innerWidth * 0.9) / 8);
+  board.style.width = (sqSize*8)+'px';
+
+  const inChk = pubChess.in_check();
+  const turn = pubChess.turn();
+  let chkKingSq = null;
+  if (inChk) {
+    'abcdefgh'.split('').forEach(f=>{
+      for(let r=1;r<=8;r++){const sq=f+r,p=pubChess.get(sq);if(p&&p.type==='k'&&p.color===turn)chkKingSq=sq;}
+    });
+  }
+
+  for (let rank=8;rank>=1;rank--) {
+    'abcdefgh'.split('').forEach((file,fi)=>{
+      const sq=file+rank, isLight=(fi+rank)%2===1, piece=pubChess.get(sq);
+      const el=document.createElement('div');
+      el.style.cssText='display:flex;align-items:center;justify-content:center;cursor:default;user-select:none;aspect-ratio:1;width:'+sqSize+'px;height:'+sqSize+'px;';
+      el.style.background=isLight?'#F0D9B5':'#B58863';
+      if(sq===chkKingSq) el.style.background='#E74C3C';
+      if(pubLastMv&&(sq===pubLastMv.from||sq===pubLastMv.to))
+        el.style.background=isLight?'#CDD52E':'#AEB33E';
+      if(piece){
+        const sp=document.createElement('span');
+        sp.style.cssText='font-size:'+Math.floor(sqSize*0.72)+'px;line-height:1;pointer-events:none;';
+        sp.textContent=PM[piece.color+piece.type.toUpperCase()]||'';
+        if(piece.color==='w'){sp.style.color='#fff';sp.style.textShadow='0 0 4px #000,0 1px 3px #000';}
+        else{sp.style.color='#111';sp.style.textShadow='0 0 3px rgba(255,255,255,.5)';}
+        el.appendChild(sp);
+      }
+      board.appendChild(el);
+    });
+  }
+}
+
+function pubUpdateStatus() {
+  const el = document.getElementById('pubStatus');
+  const tu = document.getElementById('pubTurn');
+  if (!el || !pubChess) return;
+  if (pubChess.in_checkmate()) { el.textContent='♔ Checkmate!'; el.style.color='#10b981'; }
+  else if (pubChess.in_check()) { el.textContent='⚠️ Check!'; el.style.color='#E74C3C'; }
+  else if (pubChess.in_draw()) { el.textContent='🤝 Draw'; el.style.color='#fbbf24'; }
+  else if (!pubMoves.length) { el.textContent='Game in progress...'; el.style.color='var(--muted)'; }
+  else {
+    const mv = pubMoves[pubViewIdx];
+    el.textContent = mv ? 'Move '+(pubViewIdx+1)+': '+mv.san : 'Starting position';
+    el.style.color = 'var(--muted)';
+  }
+  if (tu) {
+    const g = PUB_GAMES.find(x=>x.id===pubGid);
+    if (g && g.result==='pending' && PUB_MATCH_STATUS!=='completed') {
+      tu.innerHTML = pubChess.turn()==='w'
+        ? '<span style="background:#fff;color:#000;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">⬜ White to move</span>'
+        : '<span style="background:#18181b;color:#fff;border:1px solid #555;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">⬛ Black to move</span>';
+    } else { tu.innerHTML=''; }
+  }
+}
+
+function pubRenderMoveList() {
+  const el = document.getElementById('pubMoveList');
+  if (!el) return;
+  if (!pubMoves.length) { el.textContent='No moves yet'; el.style.color='var(--muted)'; return; }
+  let html='';
+  for(let i=0;i<pubMoves.length;i+=2){
+    const no=Math.floor(i/2)+1, w=pubMoves[i], b=pubMoves[i+1];
+    html+=`<span style="color:var(--muted);margin-right:4px;">${no}.</span>`;
+    html+=`<span onclick="pubNavToIdx(${i})" style="cursor:pointer;padding:1px 5px;border-radius:3px;margin-right:4px;${i===pubViewIdx?'background:var(--accent);color:#fff':''}">${w.san}</span>`;
+    if(b) html+=`<span onclick="pubNavToIdx(${i+1})" style="cursor:pointer;padding:1px 5px;border-radius:3px;margin-right:8px;${i+1===pubViewIdx?'background:var(--accent);color:#fff':''}">${b.san}</span>`;
+  }
+  el.innerHTML=html;
+}
+
+window.pubNav = function(delta) {
+  let ni;
+  if(delta<=-999) ni=-1;
+  else if(delta>=999) ni=pubMoves.length-1;
+  else ni=Math.max(-1,Math.min(pubMoves.length-1,pubViewIdx+delta));
+  pubReplay(ni);
+  pubRenderMoveList();
+};
+window.pubNavToIdx = function(i) { pubReplay(i); pubRenderMoveList(); };
+
+document.addEventListener('DOMContentLoaded', pubInit);
+window.addEventListener('beforeunload', ()=>{ if(pubPolling) clearInterval(pubPolling); });
+})();
+</script>
+{% endif %}
+
+<script>
+function gcwTab(btn, paneId) {
+  // Deactivate all tabs
+  document.querySelectorAll('.gcw-tab').forEach(t => t.classList.remove('gcw-tab-active'));
+  // Hide all panes
+  document.querySelectorAll('.gcw-pane').forEach(p => { p.classList.add('gcw-pane-hidden'); p.style.display=''; });
+  // Activate clicked
+  btn.classList.add('gcw-tab-active');
+  const pane = document.getElementById(paneId);
+  if(pane) { pane.classList.remove('gcw-pane-hidden'); }
+  // Lazy-load public stats when Stats tab is opened
+  if (paneId === 'gcw-pane-stats' && typeof loadPublicStats === 'function') {
+    if (!window._pubStatsLoaded) { window._pubStatsLoaded = true; loadPublicStats(); }
+  }
+}
+</script>
+{% endblock %}

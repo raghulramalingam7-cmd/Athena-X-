@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>{% block title %}Athena-X{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>"/>
+  {% block head %}{% endblock %}
+  <script>
+    (function(){
+      var t = localStorage.getItem('athena-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+
+<nav class="navbar" id="main-nav">
+  <a href="/" class="nav-brand">
+    <img src="/static/logo.png" alt="Athena-X" class="nav-brand-logo" style="height:44px;width:auto;object-fit:contain;">
+    <h1 style="height:5%; height: 5%;"> Athena-x</h1>
+  </a>
+
+  <div class="nav-links" id="nav-links">
+    <a href="/"                  class="nav-link {% if request.endpoint=='home'             %}nav-link-active{% endif %}">Home</a>
+    <a href="/matches"           class="nav-link {% if request.endpoint=='matches_page'     %}nav-link-active{% endif %}">Matches</a>
+    <a href="/sports-directory"  class="nav-link {% if request.endpoint=='sports_directory' %}nav-link-active{% endif %}">Sports</a>
+    <a href="/leaderboard"       class="nav-link {% if request.endpoint=='leaderboard'      %}nav-link-active{% endif %}">Stats</a>
+    <a href="/points"            class="nav-link {% if request.endpoint in ('points_overview','sport_points') %}nav-link-active{% endif %}">Points</a>
+    <a href="/join"              class="nav-link {% if request.endpoint=='public_join'      %}nav-link-active{% endif %}" style="color:#00ffb2;font-weight:700;">📋 Register</a>
+    {% if user %}
+      {# user is always a regular user here — current_user() returns None for admins #}
+      <a href="/profile" class="nav-link {% if request.endpoint=='profile' %}nav-link-active{% endif %}">{{ user.username }}</a>
+      <a href="/logout"  class="nav-link">Logout</a>
+    {% else %}
+      <a href="/login"   class="nav-link nav-cta">Sign In</a>
+    {% endif %}
+  </div>
+
+  <div class="nav-actions">
+    <!-- Notification Bell -->
+    <div style="position:relative;display:inline-block;">
+      <button id="notif-btn" title="Live Match Alerts" onclick="toggleUserNotifs()">
+        🔔<span id="notif-badge"></span>
+      </button>
+      <div id="notif-panel">
+        <div class="notif-panel-header">
+          <span class="notif-panel-title">🔔 Live Alerts</span>
+          <button class="notif-clear-btn" onclick="clearUserNotifs()">Clear all</button>
+        </div>
+        <div id="notif-list">
+          <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No alerts yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Theme toggle -->
+    <button class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode" aria-label="Toggle theme">
+      <span id="theme-icon">🌙</span>
+    </button>
+
+    <!-- Mobile menu -->
+    <button class="nav-mobile-toggle" id="nav-toggle" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% if msgs %}
+  <div>
+    {% for cat, msg in msgs %}
+    <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<!-- ── MOBILE BOTTOM TAB BAR ──────────────────────────────────────────── -->
+<nav class="mobile-bottom-nav">
+  <a href="/" class="mbn-tab {% if request.endpoint=='home' %}mbn-active{% endif %}">
+    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg></span>
+    <span class="mbn-label">Home</span>
+  </a>
+  <a href="/matches" class="mbn-tab {% if request.endpoint=='matches_page' %}mbn-active{% endif %}">
+    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>
+    <span class="mbn-label">Matches</span>
+  </a>
+  <a href="/join" class="mbn-tab mbn-center {% if request.endpoint=='public_join' %}mbn-active{% endif %}">
+    <span class="mbn-icon mbn-center-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    <span class="mbn-label">Register</span>
+  </a>
+  <a href="/leaderboard" class="mbn-tab {% if request.endpoint=='leaderboard' %}mbn-active{% endif %}">
+    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span>
+    <span class="mbn-label">Stats</span>
+  </a>
+  {% if user %}
+  <a href="/profile" class="mbn-tab {% if request.endpoint=='profile' %}mbn-active{% endif %}">
+    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
+    <span class="mbn-label">{{ user.username[:8] }}</span>
+  </a>
+  {% else %}
+  <a href="/login" class="mbn-tab {% if request.endpoint=='login' %}mbn-active{% endif %}">
+    <span class="mbn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
+    <span class="mbn-label">Sign In</span>
+  </a>
+  {% endif %}
+</nav>
+
+<style>
+.mobile-bottom-nav { display: none; }
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 9999;
+    background: var(--card, #1a1a2e);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    height: 64px;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  body { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important; }
+  .nav-mobile-toggle { display: none !important; }
+
+  .mbn-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    color: var(--muted, #888);
+    transition: color .2s, transform .15s;
+    padding: 6px 0;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mbn-tab:active { transform: scale(0.88); }
+
+  .mbn-icon {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mbn-icon svg { width: 22px; height: 22px; transition: stroke .2s; }
+  .mbn-label {
+    font-size: 10px; font-weight: 500; letter-spacing: .3px;
+    font-family: 'Outfit', sans-serif; line-height: 1;
+    max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* active indicator */
+  .mbn-active { color: var(--accent, #00ffb2) !important; }
+  .mbn-active .mbn-icon svg {
+    stroke: var(--accent, #00ffb2);
+    filter: drop-shadow(0 0 5px rgba(0,255,178,.55));
+  }
+  .mbn-active::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 28px; height: 3px;
+    background: var(--accent, #00ffb2);
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 0 8px rgba(0,255,178,.7);
+  }
+
+  /* centre Register bubble */
+  .mbn-center-icon {
+    width: 44px !important; height: 44px !important;
+    background: linear-gradient(135deg, var(--accent, #00ffb2), #00c8ff);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,255,178,.45);
+    margin-top: -8px;
+  }
+  .mbn-center-icon svg { width: 20px !important; height: 20px !important; stroke: #0a0a14 !important; }
+  .mbn-center .mbn-label { color: var(--accent, #00ffb2); font-weight: 700; }
+  .mbn-center::before { display: none !important; }
+
+  /* light theme */
+  [data-theme="light"] .mobile-bottom-nav {
+    background: rgba(255,255,255,0.97);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  }
+}
+</style>
+
+<footer class="site-footer">
+  <span>© 2025 Athena-X · Sports Platform</span>
+  <div class="footer-links">
+    <a href="/">Home</a>
+    <a href="/join">Register</a>
+  </div>
+</footer>
+
+<!-- Theme toggle script -->
+<script>
+(function(){
+  const btn  = document.getElementById('theme-toggle');
+  const icon = document.getElementById('theme-icon');
+  const html = document.documentElement;
+  function apply(t){
+    html.setAttribute('data-theme', t);
+    icon.textContent = t === 'dark' ? '🌙' : '☀️';
+    localStorage.setItem('athena-theme', t);
+  }
+  apply(localStorage.getItem('athena-theme') || 'dark');
+  btn.addEventListener('click', function(){
+    apply(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+})();
+
+// Mobile nav toggle
+(function(){
+  var toggle = document.getElementById('nav-toggle');
+  var links  = document.getElementById('nav-links');
+  if(toggle && links){
+    toggle.addEventListener('click', function(){ links.classList.toggle('open'); });
+    document.addEventListener('click', function(e){
+      if(!links.contains(e.target) && e.target !== toggle && !toggle.contains(e.target))
+        links.classList.remove('open');
+    });
+  }
+})();
+</script>
+
+<script>
+// ── TOAST POPUP + NOTIFICATION SYSTEM ─────────────────────────────────────
+(function(){
+  let _prev = {}, _notifs = [], _unread = 0;
+  try { _notifs = JSON.parse(localStorage.getItem('ath-user-notifs')||'[]'); } catch(e){}
+  try { _prev   = JSON.parse(sessionStorage.getItem('ath-prev')||'{}');       } catch(e){}
+
+  function saveNotifs(){ try{ localStorage.setItem('ath-user-notifs', JSON.stringify(_notifs.slice(0,30))); }catch(e){} }
+  function savePrev(){   try{ sessionStorage.setItem('ath-prev', JSON.stringify(_prev)); }catch(e){} }
+
+  // ── TOAST POPUP ──────────────────────────────────────────────────────────
+  function showToast(icon, title, body, eid, type){
+    const container = document.getElementById('toast-container');
+    if(!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + (type||'score');
+    toast.innerHTML = `
+      <div class="toast-icon">${icon||'🏆'}</div>
+      <div class="toast-body">
+        <div class="toast-title">${title}</div>
+        <div class="toast-msg">${body}</div>
+        <div class="toast-time">just now</div>
+      </div>
+      <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
+      <div class="toast-progress"></div>
+    `;
+    if(eid) toast.style.cursor = 'pointer';
+    toast.addEventListener('click', function(e){
+      if(e.target.classList.contains('toast-close')) return;
+      if(eid) location.href = '/event/'+eid;
+    });
+    container.appendChild(toast);
+
+    // Auto-remove after 5 s
+    setTimeout(function(){
+      toast.classList.add('removing');
+      setTimeout(function(){ toast.remove(); }, 350);
+    }, 5000);
+  }
+
+  // ── BELL PANEL ───────────────────────────────────────────────────────────
+  function renderPanel(){
+    const list = document.getElementById('notif-list'); if(!list) return;
+    if(_notifs.length===0){
+      list.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No alerts yet</div>';
+      return;
+    }
+    list.innerHTML = _notifs.slice(0,20).map(function(n){
+      const ago = Math.floor((Date.now()-n.ts)/60000);
+      const agoStr = ago<1?'just now':ago+'m ago';
+      return `<div class="notif-item" onclick="location='/event/${n.eid||0}'">
+        <div class="notif-item-icon">${n.icon||'🏆'}</div>
+        <div class="notif-item-body">
+          <div class="notif-item-title">${n.title}</div>
+          <div class="notif-item-msg">${n.body}</div>
+        </div>
+        <div class="notif-item-time">${agoStr}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function push(icon, title, body, eid, type){
+    _unread++;
+    _notifs.unshift({icon,title,body,eid,ts:Date.now()});
+    saveNotifs(); renderPanel();
+
+    const badge = document.getElementById('notif-badge');
+    if(badge){ badge.style.display='flex'; badge.textContent=_unread>9?'9+':String(_unread); }
+    const btn = document.getElementById('notif-btn');
+    if(btn){ btn.style.borderColor='var(--red)'; setTimeout(function(){btn.style.borderColor='';},2500); }
+
+    // Show in-page toast instead of browser Notification
+    showToast(icon, title, body, eid, type);
+  }
+
+  window.toggleUserNotifs = function(){
+    const p = document.getElementById('notif-panel'); if(!p) return;
+    const open = p.style.display !== 'none' && p.style.display !== '';
+    p.style.display = open ? 'none' : 'block';
+    if(!open){
+      _unread=0;
+      const b = document.getElementById('notif-badge'); if(b) b.style.display='none';
+      renderPanel();
+    }
+  };
+  window.clearUserNotifs = function(){
+    _notifs=[]; saveNotifs(); renderPanel();
+    const b=document.getElementById('notif-badge'); if(b) b.style.display='none'; _unread=0;
+  };
+
+  document.addEventListener('click', function(e){
+    const btn=document.getElementById('notif-btn'), p=document.getElementById('notif-panel');
+    if(!btn||!p) return;
+    if(!p.contains(e.target) && e.target!==btn && !btn.contains(e.target)) p.style.display='none';
+  });
+
+  // ── POLLING ───────────────────────────────────────────────────────────────
+  async function poll(){
+    try{
+      const res = await fetch('/api/live_matches'); if(!res.ok) return;
+      const matches = await res.json();
+      matches.forEach(function(m){
+        const prev = _prev[m.id];
+        const scoreStr = (m.score_t1!==null && m.score_t2!==null) ? `${m.score_t1}–${m.score_t2}` : '';
+        const extra = m.extra ? ` (${m.extra})` : '';
+        if(!prev){
+          if(m.status==='live') push(m.sport_icon||'🏆', m.title, 'Match is LIVE! '+scoreStr+extra, m.id, 'live');
+        } else {
+          if(m.status==='live' && (m.score_t1!==prev.s1||m.score_t2!==prev.s2||m.extra!==prev.ex))
+            push(m.sport_icon||'🏆', m.title, 'Score: '+scoreStr+extra, m.id, 'score');
+          if(m.status==='completed' && prev.status!=='completed')
+            push('🏆', m.title+' — FINAL', m.result||scoreStr, m.id, 'final');
+        }
+        _prev[m.id] = {s1:m.score_t1, s2:m.score_t2, status:m.status, ex:m.extra};
+      });
+      savePrev();
+    }catch(e){}
+  }
+
+  renderPanel(); poll(); setInterval(poll, 8000);
+})();
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

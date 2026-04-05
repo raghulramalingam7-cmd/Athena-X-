@@ -1,0 +1,1034 @@
+{% extends "admin/base.html" %}
+{% block title %}Football Scoring — {{ event.title }}{% endblock %}
+{% block page_title %}⚽ Football — {{ event.title }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/admin/events/{{ event.id }}" class="btn btn-secondary btn-sm">← Back</a>
+  {% if state and state.status not in ['completed'] %}
+    <button class="btn btn-danger btn-sm" onclick="endMatch()">🏁 Full Time</button>
+  {% endif %}
+
+  
+{% endblock %}
+
+{% block content %}
+<div style="max-width:980px;">
+
+{# ══════════════════════════════════════════════════════
+   SETUP FORM (match not yet started)
+══════════════════════════════════════════════════════ #}
+{% if not state %}
+<div class="form-card" style="max-width:800px;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <div style="font-size:56px;">⚽</div>
+    <h2 style="margin:8px 0 4px;">{{ event.team1 }} vs {{ event.team2 }}</h2>
+    <div style="color:var(--muted);font-size:14px;">11 players per team + up to 5 substitutes</div>
+  </div>
+  <form method="POST" action="/admin/football/{{ event.id }}/start" onsubmit="return fbSubmit(event)">
+    <div class="form-group" style="max-width:300px;margin-bottom:24px;">
+      <label style="font-weight:700;">⏱ Half Duration (minutes)</label>
+      <input type="number" name="half_duration" value="45" min="1" max="90"
+             style="font-size:22px;font-weight:900;text-align:center;width:100%;margin-top:6px;" required/>
+    </div>
+
+    <!-- Team Tabs -->
+    <div class="ss-tabs" id="ft-tabs">
+      <button type="button" id="ft-tab-t1" class="ss-tab active" style="--tab-color:#60a5fa;" onclick="ftTab('team1')">
+        {{ event.team1 }} <span class="ss-badge" id="ft-badge-t1">0/11</span>
+      </button>
+      <button type="button" id="ft-tab-t2" class="ss-tab" style="--tab-color:#f97316;" onclick="ftTab('team2')">
+        {{ event.team2 }} <span class="ss-badge" id="ft-badge-t2">0/11</span>
+      </button>
+    </div>
+
+    <!-- TEAM 1 PANEL -->
+    <div id="ft-panel-team1">
+      <div class="ss-section-label" style="color:#60a5fa;">{{ event.team1 }} — Starting XI</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-weight:600;letter-spacing:.4px;">Jersey # + Name (all 11 required)</div>
+      {% for i in range(1,12) %}
+      {% set _p = preset.team1.main[i-1] if preset and preset.team1.main and (i-1) < preset.team1.main|length else None %}
+      <div class="ss-row">
+        <div class="ss-num ss-num-main">{{ i }}</div>
+        <input type="number" name="team1_p{{ i }}_no" value="{{ _p.player_no if _p and _p.player_no else i }}" min="1" max="99"
+               style="width:54px;text-align:center;font-weight:800;font-size:14px;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);flex-shrink:0;"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'');if(+this.value>99)this.value=99;if(+this.value<1&&this.value!='')this.value=1;ftCount('team1')" step="1" title="Jersey number (1–99)"/>
+        <input type="text" name="team1_p{{ i }}_name" placeholder="Player {{ i }}"
+               value="{{ _p.player_name if _p else '' }}"
+               class="ss-inp" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'');ftCount('team1')" pattern="[A-Za-z ]+" title="Name must contain letters only"/>
+      </div>
+      {% endfor %}
+      <div class="ss-section-label ss-sub-label">⚡ Substitutes (up to 5)</div>
+      {% for i in range(1,6) %}
+      {% set _s = preset.team1.subs[i-1] if preset and preset.team1.subs and (i-1) < preset.team1.subs|length else None %}
+      <div class="ss-row">
+        <div class="ss-num ss-num-sub">S{{ i }}</div>
+        <input type="number" name="team1_sub{{ i }}_no" placeholder="#" min="1" max="99"
+               value="{{ _s.player_no if _s and _s.player_no else '' }}"
+               style="width:54px;text-align:center;font-weight:800;font-size:14px;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);flex-shrink:0;opacity:.7;" step="1" title="Jersey number (1–99)" oninput="this.value=this.value.replace(/[^0-9]/g,'');if(+this.value>99)this.value=99;"/>
+        <input type="text" name="team1_sub{{ i }}_name" placeholder="Sub {{ i }}" class="ss-inp" style="opacity:.7;" pattern="[A-Za-z ]+" title="Name must contain letters only"
+               value="{{ _s.player_name if _s else '' }}"
+               oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"/>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- TEAM 2 PANEL (hidden by default, shown when tab clicked) -->
+    <div id="ft-panel-team2" style="display:none;">
+      <div class="ss-section-label" style="color:#f97316;">{{ event.team2 }} — Starting XI</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-weight:600;letter-spacing:.4px;">Jersey # + Name (all 11 required)</div>
+      {% for i in range(1,12) %}
+      {% set _p = preset.team2.main[i-1] if preset and preset.team2.main and (i-1) < preset.team2.main|length else None %}
+      <div class="ss-row">
+        <div class="ss-num ss-num-main" style="background:rgba(249,115,22,.1);color:#f97316;">{{ i }}</div>
+        <input type="number" name="team2_p{{ i }}_no" value="{{ _p.player_no if _p and _p.player_no else i }}" min="1" max="99"
+               style="width:54px;text-align:center;font-weight:800;font-size:14px;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);flex-shrink:0;"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'');if(+this.value>99)this.value=99;if(+this.value<1&&this.value!='')this.value=1;ftCount('team2')" step="1" title="Jersey number (1–99)"/>
+        <input type="text" name="team2_p{{ i }}_name" placeholder="Player {{ i }}"
+               value="{{ _p.player_name if _p else '' }}"
+               class="ss-inp" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'');ftCount('team2')" pattern="[A-Za-z ]+" title="Name must contain letters only"/>
+      </div>
+      {% endfor %}
+      <div class="ss-section-label ss-sub-label">⚡ Substitutes (up to 5)</div>
+      {% for i in range(1,6) %}
+      {% set _s = preset.team2.subs[i-1] if preset and preset.team2.subs and (i-1) < preset.team2.subs|length else None %}
+      <div class="ss-row">
+        <div class="ss-num ss-num-sub">S{{ i }}</div>
+        <input type="number" name="team2_sub{{ i }}_no" placeholder="#" min="1" max="99"
+               value="{{ _s.player_no if _s and _s.player_no else '' }}"
+               style="width:54px;text-align:center;font-weight:800;font-size:14px;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);flex-shrink:0;opacity:.7;" step="1" title="Jersey number (1–99)" oninput="this.value=this.value.replace(/[^0-9]/g,'');if(+this.value>99)this.value=99;"/>
+        <input type="text" name="team2_sub{{ i }}_name" placeholder="Sub {{ i }}" class="ss-inp" style="opacity:.7;" pattern="[A-Za-z ]+" title="Name must contain letters only"
+               value="{{ _s.player_name if _s else '' }}"
+               oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"/>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width:100%;padding:15px;font-size:16px;margin-top:20px;">⚽ Start Football Match</button>
+    <div id="fb-form-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px;font-weight:600;"></div>
+  </form>
+</div>
+
+<script>
+function ftTab(team) {
+  document.getElementById('ft-panel-team1').style.display = (team === 'team1') ? 'block' : 'none';
+  document.getElementById('ft-panel-team2').style.display = (team === 'team2') ? 'block' : 'none';
+  document.getElementById('ft-tab-t1').classList.toggle('active', team === 'team1');
+  document.getElementById('ft-tab-t2').classList.toggle('active', team === 'team2');
+}
+
+function ftCount(tk) {
+  var filled = 0;
+  for (var i = 1; i <= 11; i++) {
+    var inputs = document.getElementsByName(tk + '_p' + i + '_name');
+    if (inputs.length && inputs[0].value.trim()) filled++;
+  }
+  var badgeId = (tk === 'team1') ? 'ft-badge-t1' : 'ft-badge-t2';
+  var badge = document.getElementById(badgeId);
+  if (badge) {
+    badge.textContent = filled + '/11';
+    badge.style.background = (filled === 11) ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.15)';
+  }
+}
+
+function fbSubmit(e) {
+  var teams = [
+    {key:'team1', name:'{{ event.team1 }}', badge:'ft-badge-t1', tab:'team1'},
+    {key:'team2', name:'{{ event.team2 }}', badge:'ft-badge-t2', tab:'team2'}
+  ];
+  for (var t = 0; t < teams.length; t++) {
+    var tk = teams[t].key;
+    var filled = 0;
+    for (var i = 1; i <= 11; i++) {
+      var inputs = document.getElementsByName(tk + '_p' + i + '_name');
+      if (inputs.length && inputs[0].value.trim()) filled++;
+    }
+    if (filled < 11) {
+      e.preventDefault();
+      var errEl = document.getElementById('fb-form-error');
+      errEl.style.display = 'block';
+      errEl.textContent = '⚠ ' + teams[t].name + ' needs 11 players (' + filled + ' entered). Please fill all player names.';
+      ftTab(teams[t].tab);
+      errEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+      return false;
+    }
+  }
+  return true;
+}
+</script>
+
+{% else %}
+{# ══════════════════════════════════════════════════════
+   LIVE MATCH
+══════════════════════════════════════════════════════ #}
+
+{# ── TIMER BAR ── #}
+<div style="background:linear-gradient(135deg,#060d1f,#0f172a);border:1px solid rgba(96,165,250,0.2);
+            border-radius:14px;padding:18px 24px;margin-bottom:16px;
+            display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+
+  <div style="flex:1;text-align:center;min-width:200px;">
+    <div id="timer-status-lbl" style="font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:6px;
+         color:{% if state.status=='halftime' %}#f97316{% else %}#64748b{% endif %};">
+      {% if state.status == 'halftime' %}☕ HALF TIME BREAK
+      {% elif state.current_half == 2 %}⏱ 2ND HALF — LIVE
+      {% else %}⏱ 1ST HALF — LIVE{% endif %}
+    </div>
+    <div id="timer-display"
+         style="font-size:58px;font-weight:900;font-family:monospace;letter-spacing:4px;
+                color:{% if state.status=='halftime' %}#f97316{% else %}#f8fafc{% endif %};">00:00</div>
+    <div style="font-size:12px;color:#475569;margin-top:5px;">
+      Half: <strong style="color:#94a3b8;">{{ state.half_duration }}'</strong>
+      {% if state.current_half==1 and state.extra_time_1 %}<span style="color:#f97316;"> +{{ state.extra_time_1 }}' ET</span>{% endif %}
+      {% if state.current_half==2 and state.extra_time_2 %}<span style="color:#f97316;"> +{{ state.extra_time_2 }}' ET</span>{% endif %}
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;min-width:150px;">
+    {% if state.status == 'halftime' %}
+      <div style="font-size:12px;color:#f97316;font-weight:700;text-align:center;margin-bottom:4px;">
+        Admin starts 2nd half ▼
+      </div>
+      <button class="btn btn-primary" onclick="start2ndHalf()"
+              style="padding:12px;font-size:14px;font-weight:700;background:#10b981;border-color:#10b981;">
+        ▶ Start 2nd Half
+      </button>
+      <button class="btn btn-sm" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;"
+              onclick="openExtraTime()">+⏱ Extra Time (2nd half)</button>
+    {% elif state.status != 'completed' %}
+      <button id="btn-start" class="btn btn-primary btn-sm" onclick="timerStart()">▶ Start</button>
+      <button id="btn-pause" class="btn btn-secondary btn-sm" onclick="timerPause()">⏸ Pause</button>
+      <button class="btn btn-warning btn-sm" onclick="manualHalftime()">⏰ Halftime</button>
+      <button class="btn btn-sm" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;"
+              onclick="openExtraTime()">+⏱ Extra Time</button>
+    {% endif %}
+  </div>
+</div>
+
+{# ── SCOREBOARD ── #}
+<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;
+            background:var(--bg2);border-radius:14px;padding:20px 28px;margin-bottom:20px;">
+  <div style="text-align:center;">
+    <div style="font-weight:700;color:var(--muted2);margin-bottom:6px;">{{ state.team1 }}</div>
+    <div style="font-size:64px;font-weight:900;color:#60a5fa;" id="t1-score">{{ state.team1_score }}</div>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:22px;font-weight:900;color:var(--muted);">VS</div>
+    {% if state.status == 'completed' %}
+      <div class="status-badge status-completed" style="margin-top:6px;">FT</div>
+    {% elif state.status == 'halftime' %}
+      <div style="background:#f97316;color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;font-weight:700;margin-top:6px;">☕ HT</div>
+    {% else %}
+      <div style="background:#ef4444;color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;font-weight:700;animation:blink 1s infinite;margin-top:6px;">🔴 LIVE</div>
+    {% endif %}
+    {% if state.result %}<div style="font-size:12px;color:#10b981;font-weight:700;margin-top:6px;">{{ state.result }}</div>{% endif %}
+  </div>
+  <div style="text-align:center;">
+    <div style="font-weight:700;color:var(--muted2);margin-bottom:6px;">{{ state.team2 }}</div>
+    <div style="font-size:64px;font-weight:900;color:#f97316;" id="t2-score">{{ state.team2_score }}</div>
+  </div>
+</div>
+
+{% if state.status == 'halftime' %}
+<div style="background:rgba(249,115,22,0.08);border:2px solid rgba(249,115,22,0.35);
+            border-radius:14px;padding:22px 24px;margin-bottom:20px;text-align:center;">
+  <div style="font-size:32px;margin-bottom:6px;">☕</div>
+  <div style="font-size:20px;font-weight:900;color:#f97316;margin-bottom:4px;">HALF TIME</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+    1st Half complete. Set extra time for 2nd half if needed, then press <strong>▶ Start 2nd Half</strong>.
+  </div>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <button class="btn btn-primary" onclick="start2ndHalf()"
+            style="padding:12px 28px;font-size:15px;background:#10b981;border-color:#10b981;">
+      ▶ Start 2nd Half
+    </button>
+    <button class="btn btn-sm" onclick="openExtraTime()"
+            style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:12px 20px;">
+      +⏱ Set Extra Time for 2nd Half
+    </button>
+  </div>
+</div>
+{% endif %}
+
+{% if state.status not in ['halftime', 'completed', 'penalty'] %}
+<div class="form-card" style="margin-bottom:20px;">
+  <h3 style="margin-bottom:16px;">📝 Record Event</h3>
+
+  <div style="margin-bottom:14px;">
+    <label style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;">EVENT TYPE</label>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <button class="evt-btn active" onclick="setEvtType('goal',this)">⚽ Goal</button>
+      <button class="evt-btn" onclick="setEvtType('penalty',this)">🥅 Penalty</button>
+      <button class="evt-btn" onclick="setEvtType('own_goal',this)">↩ Own Goal</button>
+      <button class="evt-btn" onclick="setEvtType('yellow_card',this)">🟡 Yellow Card</button>
+      <button class="evt-btn" onclick="setEvtType('red_card',this)">🔴 Red Card</button>
+      <button class="evt-btn" onclick="setEvtType('corner',this)">🚩 Corner</button>
+      <button class="evt-btn" onclick="setEvtType('foul',this)">🦵 Foul</button>
+    </div>
+    <input type="hidden" id="event-type" value="goal"/>
+  </div>
+
+  <div style="margin-bottom:14px;">
+    <label style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;">TEAM</label>
+    <div style="display:flex;gap:8px;">
+      <button class="team-btn active" onclick="setTeam('{{ state.team1 }}',this)">{{ state.team1 }}</button>
+      <button class="team-btn" onclick="setTeam('{{ state.team2 }}',this)">{{ state.team2 }}</button>
+    </div>
+    <input type="hidden" id="event-team" value="{{ state.team1 }}"/>
+  </div>
+
+  <div style="margin-bottom:14px;">
+    <label style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;">PLAYER</label>
+    <div id="player-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    <input type="hidden" id="event-player" value=""/>
+  </div>
+
+  <div style="margin-bottom:14px;" id="assist-section">
+    <label style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;">ASSIST (optional)</label>
+    <div id="assist-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    <input type="hidden" id="assist-player" value=""/>
+  </div>
+
+  <div style="background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.18);
+              border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:12px;color:#60a5fa;font-weight:700;">⏱ EVENT TIME (auto-captured):</span>
+    <span id="event-timer-display" style="font-size:20px;font-weight:900;font-family:monospace;color:#f1f5f9;">00:00</span>
+  </div>
+
+  <div class="form-group">
+    <label>Note (optional)</label>
+    <input type="text" id="event-note" placeholder="e.g. Header, Free kick..."/>
+  </div>
+  <button id="record-event-btn" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;" onclick="submitEvent()" disabled title="Start the timer to enable recording">
+    📝 Record Event
+  </button>
+  <button class="btn btn-secondary" style="width:100%;padding:10px;font-size:14px;margin-top:8px;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.35);color:#f87171;" onclick="undoLastEvent()">↩ Undo Last Event</button>
+  <div id="record-timer-hint" style="text-align:center;font-size:12px;color:#f97316;font-weight:600;margin-top:6px;">▶ Start the timer to enable recording</div>
+</div>
+{% endif %}
+
+{% if state.status != 'completed' %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+  {% for tname in [state.team1, state.team2] %}
+  <div class="form-card">
+    <h4 style="margin-bottom:8px;">{{ tname }}</h4>
+    <div style="font-size:11px;color:#10b981;font-weight:700;margin-bottom:6px;letter-spacing:.5px;">
+      🟢 ON FIELD ({{ state.active_players[tname]|length }})
+    </div>
+    {% for p in state.players[tname] if p.is_active and not p.is_banned %}
+    <div class="player-row">
+      <span class="pr-num">#{{ p.player_no }}</span>
+      <span class="pr-name">{{ p.player_name }}</span>
+      {% if p.goals %}<span style="color:#10b981;font-size:12px;">⚽{{ p.goals }}</span>{% endif %}
+      {% if p.assists %}<span style="color:#60a5fa;font-size:12px;margin-left:2px;">🅰{{ p.assists }}</span>{% endif %}
+      {% if p.yellow_cards == 1 %}<span style="margin-left:2px;font-size:13px;">🟡</span>{% endif %}
+      {% if p.yellow_cards >= 2 %}<span style="margin-left:2px;font-size:11px;background:#7c2d12;color:#fed7aa;border-radius:4px;padding:1px 5px;">🟡🟡</span>{% endif %}
+      {% if p.red_cards %}<span style="font-size:11px;background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 5px;margin-left:2px;">🔴</span>{% endif %}
+    </div>
+    {% endfor %}
+
+    {% if state.banned_players and state.banned_players[tname] %}
+    <div style="font-size:11px;color:#ef4444;font-weight:700;margin:8px 0 4px;letter-spacing:.5px;">🚫 SENT OFF</div>
+    {% for p in state.banned_players[tname] %}
+    <div class="player-row" style="opacity:.6;">
+      <span class="pr-num" style="color:#ef4444;">#{{ p.player_no }}</span>
+      <span class="pr-name" style="color:#ef4444;text-decoration:line-through;">{{ p.player_name }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div style="font-size:11px;color:#94a3b8;font-weight:700;margin:10px 0 6px;letter-spacing:.5px;">⚪ BENCH</div>
+    {% for p in state.players[tname] if not p.is_active and not p.is_banned %}
+    <div class="player-row" style="opacity:.55;">
+      <span class="pr-num" style="color:#64748b;">#{{ p.player_no }}</span>
+      <span class="pr-name" style="font-weight:400;">{{ p.player_name }}</span>
+    </div>
+    {% endfor %}
+
+    {% if state.status not in ['halftime','completed','penalty'] %}
+    <button onclick="openSubModal('{{ tname }}')"
+            style="margin-top:12px;width:100%;padding:9px;
+                   background:rgba(96,165,250,.06);border:1px dashed rgba(96,165,250,.35);
+                   border-radius:8px;color:#60a5fa;cursor:pointer;font-size:13px;font-weight:600;">
+      ⇄ Make Substitution
+    </button>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# MODALS #}
+<div id="redcard-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:20000;align-items:center;justify-content:center;">
+  <div style="background:#120408;border:2px solid #ef4444;border-radius:16px;padding:28px;max-width:500px;width:92%;">
+    <div style="text-align:center;margin-bottom:22px;">
+      <div style="font-size:52px;">🔴</div>
+      <h3 style="color:#ef4444;margin:10px 0 4px;">RED CARD!</h3>
+      <div id="rc-player-label" style="font-size:15px;color:#fca5a5;font-weight:700;margin-bottom:6px;"></div>
+      <div style="font-size:13px;color:#94a3b8;">Player is removed. <strong style="color:#f97316;">Select bench player to replace.</strong></div>
+    </div>
+    <div style="font-weight:700;color:#f97316;margin-bottom:12px;font-size:14px;" id="rc-team-label"></div>
+    <label style="font-size:12px;color:#94a3b8;font-weight:700;display:block;margin-bottom:8px;">CHOOSE REPLACEMENT FROM BENCH</label>
+    <div id="rc-sub-btns" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;margin-bottom:4px;">
+      <input type="number" id="rc-in-jersey" placeholder="Jersey #" min="1" max="99" style="width:110px;text-align:center;font-weight:700;font-size:16px;" step="1" oninput="this.value=this.value.replace(/[^0-9]/g,'');if(+this.value>99)this.value=99;" title="Jersey number (1–99)"/>
+      <input type="text" id="rc-in-name" placeholder="Or type player name..." style="flex:1;" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')" title="Name must contain letters only"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-primary" onclick="confirmRedCardSub()" style="flex:1;padding:13px;background:#10b981;border-color:#10b981;">✅ Confirm Replacement</button>
+      <button class="btn btn-secondary" onclick="closeModal('redcard-modal')" style="flex:1;padding:13px;">No Sub Available</button>
+    </div>
+  </div>
+</div>
+
+<div id="ht-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10002;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:16px;padding:30px;max-width:400px;width:92%;border:2px solid rgba(249,115,22,.4);">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:36px;">⏰</div>
+      <h3 style="margin:8px 0 4px;">End of 1st Half</h3>
+      <div style="font-size:13px;color:var(--muted);">Timer stopped. Add injury time if needed.</div>
+    </div>
+    <div class="form-group">
+      <label>Extra / Injury Time (minutes) — 0 if none</label>
+      <input type="number" id="ht-extra" min="0" max="15" value="0" style="width:100%;text-align:center;font-size:32px;font-weight:900;margin-top:6px;"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-warning" onclick="confirmHalftime()" style="flex:1;padding:13px;">☕ Go to Half Time</button>
+      <button class="btn btn-secondary" onclick="resumeExtraTime()" style="flex:1;padding:13px;">▶ Play Extra Time</button>
+    </div>
+  </div>
+</div>
+
+<div id="et-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:16px;padding:30px;max-width:360px;width:92%;border:1px solid rgba(255,255,255,0.08);">
+    <h3 style="margin-bottom:16px;">+⏱ Extra Time — Half {{ state.current_half }}</h3>
+    <div class="form-group">
+      <label>Extra Minutes</label>
+      <input type="number" id="et-minutes" min="0" max="15"
+             value="{{ state.extra_time_2 if state.current_half==2 else (state.extra_time_1 or 0) }}"
+             style="width:100%;text-align:center;font-size:28px;font-weight:900;margin-top:6px;"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-primary" onclick="confirmExtraTime()" style="flex:1;">✅ Set Extra Time</button>
+      <button class="btn btn-secondary" onclick="closeModal('et-modal')" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+{% if state and state.status == 'penalty' and state.penalty_shootout %}
+{% set ps = state.penalty_shootout %}
+<div style="background:linear-gradient(135deg,#1a0a2e,#0f172a);border:2px solid rgba(168,85,247,0.4);border-radius:16px;padding:22px 24px;margin-bottom:20px;">
+  <div style="text-align:center;margin-bottom:16px;">
+    <div style="font-size:28px;">🥅</div>
+    <div style="font-size:20px;font-weight:900;color:#c084fc;letter-spacing:1px;">PENALTY SHOOTOUT</div>
+    <div style="font-size:13px;color:#94a3b8;margin-top:4px;">Round {{ ps.round_no }}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 80px 1fr;gap:12px;align-items:center;margin-bottom:20px;">
+    <div style="text-align:center;">
+      <div style="font-weight:700;color:#60a5fa;font-size:13px;">{{ state.team1 }}</div>
+      <div style="font-size:52px;font-weight:900;color:#60a5fa;">{{ ps.team1_score }}</div>
+    </div>
+    <div style="text-align:center;font-size:20px;color:#475569;font-weight:900;">–</div>
+    <div style="text-align:center;">
+      <div style="font-weight:700;color:#f97316;font-size:13px;">{{ state.team2 }}</div>
+      <div style="font-size:52px;font-weight:900;color:#f97316;">{{ ps.team2_score }}</div>
+    </div>
+  </div>
+  {% set all_rounds = ps.kicks | map(attribute='round_no') | unique | list %}
+  {% for rnd in all_rounds %}
+    {% set t1_kicks = ps.kicks | selectattr('team','eq',state.team1) | selectattr('round_no','eq',rnd) | list %}
+    {% set t2_kicks = ps.kicks | selectattr('team','eq',state.team2) | selectattr('round_no','eq',rnd) | list %}
+    {% if loop.length > 1 %}<div style="font-size:11px;font-weight:700;color:#00ffb2;letter-spacing:.5px;margin-bottom:6px;text-align:center;">ROUND {{ rnd }}</div>{% endif %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:6px;">{{ state.team1 }}</div>
+        {% set t1_shown_btn = namespace(done=false) %}
+        {% for k in t1_kicks %}
+          {% set bg = 'rgba(16,185,129,0.12)' if k.result=='scored' else ('rgba(239,68,68,0.08)' if k.result=='missed' else 'rgba(96,165,250,0.06)') %}
+          {% set bc = 'rgba(16,185,129,0.3)' if k.result=='scored' else ('rgba(239,68,68,0.2)' if k.result=='missed' else 'rgba(96,165,250,0.15)') %}
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:7px 10px;border-radius:8px;background:{{ bg }};border:1px solid {{ bc }};">
+            <span>{% if k.result=='scored' %}✅{% elif k.result=='missed' %}❌{% else %}⏳{% endif %}</span>
+            <span style="font-size:12px;flex:1;">{{ k.player_name }}</span>
+            {% if k.result == 'pending' and ps.status == 'active' and not t1_shown_btn.done %}
+              {% set t1_shown_btn.done = true %}
+              <div style="display:flex;gap:4px;">
+                <button onclick="recordPenaltyKick({{ k.id }},'scored')" style="background:#10b981;border:none;color:#fff;padding:3px 8px;font-size:11px;border-radius:5px;cursor:pointer;">⚽</button>
+                <button onclick="recordPenaltyKick({{ k.id }},'missed')" style="background:#ef4444;border:none;color:#fff;padding:3px 8px;font-size:11px;border-radius:5px;cursor:pointer;">✗</button>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#f97316;margin-bottom:6px;">{{ state.team2 }}</div>
+        {% set t2_shown_btn = namespace(done=false) %}
+        {% for k in t2_kicks %}
+          {% set bg2 = 'rgba(16,185,129,0.12)' if k.result=='scored' else ('rgba(239,68,68,0.08)' if k.result=='missed' else 'rgba(249,115,22,0.06)') %}
+          {% set bc2 = 'rgba(16,185,129,0.3)' if k.result=='scored' else ('rgba(239,68,68,0.2)' if k.result=='missed' else 'rgba(249,115,22,0.15)') %}
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:7px 10px;border-radius:8px;background:{{ bg2 }};border:1px solid {{ bc2 }};">
+            <span>{% if k.result=='scored' %}✅{% elif k.result=='missed' %}❌{% else %}⏳{% endif %}</span>
+            <span style="font-size:12px;flex:1;">{{ k.player_name }}</span>
+            {% if k.result == 'pending' and ps.status == 'active' and not t2_shown_btn.done %}
+              {% set t2_shown_btn.done = true %}
+              <div style="display:flex;gap:4px;">
+                <button onclick="recordPenaltyKick({{ k.id }},'scored')" style="background:#10b981;border:none;color:#fff;padding:3px 8px;font-size:11px;border-radius:5px;cursor:pointer;">⚽</button>
+                <button onclick="recordPenaltyKick({{ k.id }},'missed')" style="background:#ef4444;border:none;color:#fff;padding:3px 8px;font-size:11px;border-radius:5px;cursor:pointer;">✗</button>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+  {% if ps.status == 'completed' and ps.winner %}
+  <div style="text-align:center;padding:14px;background:rgba(16,185,129,0.1);border-radius:10px;margin-top:8px;">
+    <div style="font-size:16px;font-weight:900;color:#10b981;">🏆 {{ ps.winner }} wins on penalties!</div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div id="penalty-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:#0f172a;border:2px solid rgba(168,85,247,0.4);border-radius:16px;padding:26px;max-width:620px;width:95%;max-height:90vh;overflow-y:auto;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:32px;">🥅</div>
+      <div style="font-size:18px;font-weight:900;color:#c084fc;" id="pen-round-label">Penalty Shootout</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Select exactly 5 players from each team</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:8px;" id="pen-t1-label">{% if state %}{{ state.team1 }}{% endif %} — Select 5</div>
+        <div id="pen-t1-players" style="max-height:320px;overflow-y:auto;"></div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#f97316;margin-bottom:8px;" id="pen-t2-label">{% if state %}{{ state.team2 }}{% endif %} — Select 5</div>
+        <div id="pen-t2-players" style="max-height:320px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:#64748b;text-align:center;margin-bottom:12px;" id="pen-selection-status"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="pen-start-btn" class="btn btn-primary" onclick="startPenaltyShootout()" style="flex:1;padding:13px;background:#7c3aed;border-color:#7c3aed;" disabled title="Select exactly 5 players from each team">🥅 Start Penalty Shootout</button>
+      <button class="btn btn-secondary" onclick="closePenaltyModal()" style="padding:13px 18px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:16px;padding:26px;max-width:500px;width:92%;border:1px solid rgba(255,255,255,0.07);">
+    <h3 style="margin-bottom:4px;">⇄ Substitution</h3>
+    <div id="sub-team-lbl" style="font-weight:700;color:var(--accent);margin-bottom:18px;font-size:15px;"></div>
+    <div class="form-group">
+      <label>Player Going OUT</label>
+      <div id="sub-out-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;"></div>
+      <input type="number" id="sub-out-jersey" placeholder="Jersey # of player going out" style="width:100%;text-align:center;font-weight:700;font-size:16px;" step="1" min="1" max="99" oninput="this.value=this.value.replace(/[^0-9]/g,'');if(+this.value>99)this.value=99;" title="Jersey number (1–99)"/>
+      <input type="hidden" id="sub-out-name" value=""/>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label>Player Coming IN (from bench)</label>
+      <div id="sub-in-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="number" id="sub-in-jersey" placeholder="Jersey #" style="width:110px;text-align:center;font-weight:700;font-size:16px;" step="1" min="1" max="99" oninput="this.value=this.value.replace(/[^0-9]/g,'');if(+this.value>99)this.value=99;" title="Jersey number (1–99)"/>
+        <input type="text" id="sub-in-name" placeholder="Or type name..." style="flex:1;" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')" title="Name must contain letters only"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;">
+      <button class="btn btn-primary" onclick="confirmSub()" style="flex:1;padding:12px;">✅ Confirm</button>
+      <button class="btn btn-secondary" onclick="closeModal('sub-modal')" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="form-card">
+  <h4 style="margin-bottom:12px;">📋 Match Events Timeline</h4>
+  <div style="max-height:340px;overflow-y:auto;">
+    {% if state.events %}
+      {% for ev in state.events|reverse %}
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);font-size:13px;">
+        <span style="background:var(--bg3);border-radius:5px;padding:3px 8px;font-size:12px;font-weight:800;min-width:52px;text-align:center;font-family:monospace;color:#60a5fa;">
+          {% set m = ev.timer_second // 60 %}{% set s = ev.timer_second % 60 %}{{ '%02d:%02d'|format(m,s) }}
+        </span>
+        <span>
+          {% if ev.event_type=='goal' %}⚽ Goal
+          {% elif ev.event_type=='penalty' %}🥅 Penalty
+          {% elif ev.event_type=='own_goal' %}↩ Own Goal
+          {% elif ev.event_type=='yellow_card' %}🟡 Yellow Card
+          {% elif ev.event_type=='red_card' %}🔴 Red Card
+          {% elif ev.event_type=='substitution' %}🔄 Sub
+          {% elif ev.event_type=='halftime' %}☕ Half Time
+          {% elif ev.event_type=='corner' %}🚩 Corner
+          {% elif ev.event_type=='foul' %}🦵 Foul
+          {% else %}{{ ev.event_type }}{% endif %}
+        </span>
+        <strong>{{ ev.player_name or '' }}</strong>
+        {% if ev.assist_player and ev.event_type in ['goal','penalty'] %}
+          <span style="color:var(--muted);font-size:12px;">(assist: {{ ev.assist_player }})</span>
+        {% endif %}
+        <span class="status-badge {% if ev.team==state.team1 %}status-upcoming{% else %}status-completed{% endif %}" style="margin-left:auto;font-size:11px;">{{ ev.team or '—' }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding:30px;text-align:center;color:var(--muted);">No events recorded yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="form-card" style="margin-top:20px;">
+  <h4 style="margin-bottom:16px;">📊 Full Match Scorecard</h4>
+  {% for tname, tcolor in [(state.team1, '#60a5fa'), (state.team2, '#f97316')] %}
+  {% set tplayers = state.players[tname] %}
+  <div style="margin-bottom:24px;">
+    <div style="font-size:13px;font-weight:800;color:{{ tcolor }};margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid rgba({{ '96,165,250' if tname==state.team1 else '249,115,22' }},0.3);">{{ tname }}</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;">
+            <th style="text-align:left;padding:4px 8px;">#</th>
+            <th style="text-align:left;padding:4px 8px;">Player</th>
+            <th style="text-align:center;padding:4px 8px;">Status</th>
+            <th style="text-align:center;padding:4px 8px;">⚽ Goals</th>
+            <th style="text-align:center;padding:4px 8px;">🅰 Assists</th>
+            <th style="text-align:center;padding:4px 8px;">🟡 YC</th>
+            <th style="text-align:center;padding:4px 8px;">🔴 RC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in tplayers %}
+          <tr style="border-bottom:1px solid var(--border);{% if p.is_banned %}opacity:.55;{% elif not p.is_active %}opacity:.5;{% endif %}">
+            <td style="padding:6px 8px;font-weight:800;color:{{ tcolor }};font-size:11px;">#{{ p.player_no }}</td>
+            <td style="padding:6px 8px;font-weight:600;">{{ p.player_name }}</td>
+            <td style="padding:6px 8px;text-align:center;">
+              {% if p.is_banned %}<span style="background:rgba(239,68,68,.2);color:#ef4444;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;">SENT OFF</span>
+              {% elif p.is_active %}<span style="background:rgba(16,185,129,.15);color:#10b981;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;">ON FIELD</span>
+              {% else %}<span style="background:rgba(100,116,139,.15);color:#94a3b8;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;">OFF</span>{% endif %}
+            </td>
+            <td style="padding:6px 8px;text-align:center;font-weight:800;color:{% if p.goals %}#10b981{% else %}var(--muted){% endif %};">{{ p.goals or '—' }}</td>
+            <td style="padding:6px 8px;text-align:center;font-weight:700;color:{% if p.assists %}#60a5fa{% else %}var(--muted){% endif %};">{{ p.assists or '—' }}</td>
+            <td style="padding:6px 8px;text-align:center;">
+              {% if p.yellow_cards == 1 %}🟡{% elif p.yellow_cards >= 2 %}🟡🟡{% else %}<span style="color:var(--muted);">—</span>{% endif %}
+            </td>
+            <td style="padding:6px 8px;text-align:center;">
+              {% if p.red_cards %}🔴{% else %}<span style="color:var(--muted);">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+  {% if state.status == 'completed' %}
+  <div style="margin-top:20px;padding:18px;background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(96,165,250,0.06));border:1px solid rgba(16,185,129,0.25);border-radius:12px;text-align:center;">
+    <div style="font-size:14px;font-weight:900;color:#10b981;margin-bottom:4px;">🏆 FULL TIME</div>
+    <div style="font-size:32px;font-weight:900;font-family:monospace;letter-spacing:4px;color:#f8fafc;">{{ state.team1_score }} – {{ state.team2_score }}</div>
+    {% if state.result %}<div style="font-size:14px;color:#10b981;font-weight:700;margin-top:6px;">{{ state.result }}</div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endif %}
+</div>
+
+<style>
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+.player-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.pr-num{background:rgba(96,165,250,.12);border-radius:5px;padding:2px 8px;font-size:12px;font-weight:800;color:#60a5fa;min-width:38px;text-align:center;}
+.pr-name{flex:1;font-weight:600;}
+.evt-btn{padding:7px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;}
+.evt-btn.active{border-color:var(--accent);background:rgba(96,165,250,.15);color:var(--accent);}
+.team-btn{padding:10px 20px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:14px;font-weight:700;transition:all .15s;flex:1;}
+.team-btn.active{border-color:var(--accent);background:rgba(96,165,250,.15);color:var(--accent);}
+.player-sel-btn{padding:5px 10px;background:var(--bg3);border:2px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;transition:all .1s;color:var(--text);}
+.player-sel-btn.active{border-color:#10b981;background:rgba(16,185,129,.15);color:#10b981;}
+.sub-out-btn{padding:5px 10px;background:var(--bg3);border:2px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;color:var(--text);}
+.sub-out-btn.active{border-color:#ef4444;background:rgba(239,68,68,.15);color:#ef4444;}
+.sub-in-btn,.rc-sub-btn{padding:6px 12px;background:var(--bg3);border:2px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;color:var(--text);}
+.sub-in-btn.active,.rc-sub-btn.active{border-color:#10b981;background:rgba(16,185,129,.15);color:#10b981;}
+</style>
+
+<script>
+const EID          = {{ event.id }};
+const PLAYERS      = {{ state.players|tojson      if state else '{}' }};
+const ACTIVE_PLAYERS = {{ state.active_players|tojson if state else '{}' }};
+const SUB_PLAYERS  = {{ state.sub_players|tojson  if state else '{}' }};
+const ALL_PLAYERS  = {{ state.players|tojson      if state else '{}' }};
+const BANNED_PLAYERS = {{ state.banned_players|tojson if state else '{}' }};
+const PENALTY_USED = {{ state.penalty_shootout.used_players|tojson if (state and state.penalty_shootout) else '{}' }};
+const TEAM1        = {{ state.team1|tojson         if state else '""' }};
+const TEAM2        = {{ state.team2|tojson         if state else '""' }};
+const CURRENT_HALF = {{ state.current_half         if state else 1 }};
+const HALF_DUR_SEC = {{ (state.half_duration or 45) * 60 if state else 2700 }};
+const EXTRA1_SEC   = {{ (state.extra_time_1 or 0)  * 60  if state else 0 }};
+const EXTRA2_SEC   = {{ (state.extra_time_2 or 0)  * 60  if state else 0 }};
+const MATCH_STATUS = {{ state.status|tojson        if state else '"setup"' }};
+
+let timerRunning  = {{ 'true' if state and state.timer_running else 'false' }};
+let timerOffset   = {{ state.timer_elapsed if state else 0 }};
+let timerBase     = timerRunning ? Date.now() : 0;
+let timerInterval = null;
+let htTriggered   = false;
+
+function fmtSec(sec) {
+  return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+}
+function getElapsed() {
+  return timerRunning ? timerOffset + Math.floor((Date.now()-timerBase)/1000) : timerOffset;
+}
+function halfEndSec() {
+  if (CURRENT_HALF===1) return HALF_DUR_SEC+EXTRA1_SEC;
+  return HALF_DUR_SEC+EXTRA1_SEC+HALF_DUR_SEC+EXTRA2_SEC;
+}
+function updateTimerUI() {
+  const el = getElapsed();
+  const dEl = document.getElementById('timer-display');
+  const eEl = document.getElementById('event-timer-display');
+  if (dEl) dEl.textContent = fmtSec(el);
+  if (eEl) eEl.textContent = fmtSec(el);
+  if (!timerRunning || htTriggered) return;
+  if (CURRENT_HALF===1 && el>=halfEndSec()) {
+    _localPause();
+    htTriggered=true;
+    fetch('/api/football/'+EID+'/timer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pause'})});
+    setTimeout(()=>openHtModal(),300);
+    return;
+  }
+  if (CURRENT_HALF===2 && el>=halfEndSec()) {
+    _localPause();
+    htTriggered=true;
+    fetch('/api/football/'+EID+'/timer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pause'})});
+    setTimeout(()=>{if(confirm('⏱ 2nd half time up! End match (Full Time)?'))endMatch();},400);
+  }
+}
+function _localPause() {
+  if(!timerRunning)return;
+  clearInterval(timerInterval);
+  timerOffset=getElapsed();
+  timerRunning=false;
+  updateTimerUI();
+  _updateRecordBtn(false);
+}
+if (timerRunning && MATCH_STATUS!=='halftime') {
+  timerInterval=setInterval(updateTimerUI,500);
+}
+updateTimerUI();
+
+function _updateRecordBtn(running) {
+  const btn = document.getElementById('record-event-btn');
+  const hint = document.getElementById('record-timer-hint');
+  if (btn) {
+    btn.disabled = !running;
+    btn.style.opacity = running ? '1' : '0.45';
+    btn.title = running ? '' : 'Start the timer to enable recording';
+  }
+  if (hint) hint.style.display = running ? 'none' : 'block';
+}
+// Set initial state
+_updateRecordBtn(timerRunning && MATCH_STATUS !== 'halftime');
+
+async function timerStart() {
+  if(timerRunning)return;
+  timerBase=Date.now();timerRunning=true;htTriggered=false;
+  timerInterval=setInterval(updateTimerUI,500);
+  _updateRecordBtn(true);
+  await fetch('/api/football/'+EID+'/timer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start'})});
+}
+async function timerPause() {
+  _localPause();
+  _updateRecordBtn(false);
+  await fetch('/api/football/'+EID+'/timer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pause'})});
+}
+function manualHalftime() {
+  _localPause();
+  _updateRecordBtn(false);
+  fetch('/api/football/'+EID+'/timer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pause'})});
+  openHtModal();
+}
+function openHtModal(){document.getElementById('ht-modal').style.display='flex';}
+
+async function resumeExtraTime() {
+  const extra=parseInt(document.getElementById('ht-extra').value)||0;
+  if(extra<=0){await confirmHalftime();return;}
+  await fetch('/api/football/'+EID+'/timer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set_extra',half:1,extra_minutes:extra})});
+  closeModal('ht-modal');
+  htTriggered=false;
+  window._extra1Patch=extra*60;
+  await timerStart();
+  window.halfEndSec=()=>HALF_DUR_SEC+(window._extra1Patch||EXTRA1_SEC);
+}
+async function confirmHalftime() {
+  const extra=parseInt(document.getElementById('ht-extra').value)||0;
+  const res=await fetch('/api/football/'+EID+'/half',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({half:'halftime',extra_minutes:extra})});
+  const d=await res.json();
+  if(d.success)location.reload();
+}
+async function start2ndHalf() {
+  const res=await fetch('/api/football/'+EID+'/half',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({half:2,extra_minutes:0})});
+  const d=await res.json();
+  if(d.success)location.reload();
+}
+function openExtraTime(){document.getElementById('et-modal').style.display='flex';}
+async function confirmExtraTime() {
+  const mins=parseInt(document.getElementById('et-minutes').value)||0;
+  await fetch('/api/football/'+EID+'/timer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set_extra',half:CURRENT_HALF,extra_minutes:mins})});
+  closeModal('et-modal');location.reload();
+}
+
+function setEvtType(val,btn) {
+  document.getElementById('event-type').value=val;
+  document.querySelectorAll('.evt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const asc=document.getElementById('assist-section');
+  if(asc)asc.style.display=['goal','penalty'].includes(val)?'block':'none';
+}
+function setTeam(val,btn) {
+  document.getElementById('event-team').value=val;
+  document.getElementById('event-player').value='';
+  document.getElementById('assist-player').value='';
+  document.querySelectorAll('.team-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  buildPlayerBtns(val);
+}
+function buildPlayerBtns(team) {
+  const players=ACTIVE_PLAYERS[team]||[];
+  const pdiv=document.getElementById('player-btns');
+  const adiv=document.getElementById('assist-btns');
+  if(!pdiv)return;
+  const makeBtn=(p,fn)=>`<button class="player-sel-btn" onclick="${fn}">#${p.player_no} ${p.player_name}</button>`;
+  pdiv.innerHTML=players.map(p=>makeBtn(p,`selPlayer('${p.player_name}',this)`)).join('');
+  if(adiv){
+    adiv.innerHTML='<button class="player-sel-btn" onclick="selAssist(\'\',this)" style="opacity:.6;">None</button>'+
+      players.map(p=>makeBtn(p,`selAssist('${p.player_name}',this)`)).join('');
+  }
+}
+function selPlayer(name,btn){
+  document.getElementById('event-player').value=name;
+  document.querySelectorAll('#player-btns .player-sel-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function selAssist(name,btn){
+  document.getElementById('assist-player').value=name;
+  document.querySelectorAll('#assist-btns .player-sel-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function submitEvent() {
+  const evType=document.getElementById('event-type').value;
+  const team=document.getElementById('event-team').value;
+  const player=document.getElementById('event-player').value;
+  const timerSec=getElapsed();
+  const playerRequired=['goal','penalty','own_goal','yellow_card','red_card'];
+  if(playerRequired.includes(evType)&&!player){alert('Please select a player for this event.');return;}
+  const res=await fetch('/api/football/'+EID+'/event',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({event_type:evType,team:team,player_name:player,
+      assist_player:document.getElementById('assist-player').value,
+      timer_second:timerSec,note:document.getElementById('event-note').value})});
+  const d=await res.json();
+  if(!d.success){alert(d.error||'Error');return;}
+  const evLabels={goal:'⚽ Goal recorded!',penalty:'🥅 Penalty goal!',own_goal:'↩ Own goal!',
+    yellow_card:'🟡 Yellow card!',red_card:'🔴 Red card! Player sent off.',corner:'🚩 Corner.',foul:'🦵 Foul.'};
+  showToast(evLabels[evType]||'✅ Recorded');
+  if(evType==='red_card'&&player){
+    const banner=document.createElement('div');
+    banner.textContent='🔴 RED CARD! '+player+' sent off. Team continues with 10 players.';
+    banner.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#7f1d1d;color:#fca5a5;border:2px solid #ef4444;border-radius:12px;padding:16px 24px;z-index:99999;font-weight:700;font-size:14px;max-width:500px;text-align:center;';
+    document.body.appendChild(banner);
+    setTimeout(()=>location.reload(),2200);
+  } else {
+    setTimeout(()=>location.reload(),800);
+  }
+}
+function showToast(msg){
+  let t=document.getElementById('ft-toast');
+  if(!t){t=document.createElement('div');t.id='ft-toast';t.style.cssText='position:fixed;bottom:28px;right:24px;background:#1e293b;border:1px solid #10b981;border-left:4px solid #10b981;color:white;padding:12px 18px;border-radius:10px;z-index:9999;font-size:13px;font-weight:600;max-width:300px;transition:opacity .4s;';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2200);
+}
+
+let _rcTeam='',_rcOutPlayer='';
+function openRedCardModal(team,outPlayer){
+  _rcTeam=team;_rcOutPlayer=outPlayer;
+  const playerObj=(PLAYERS[team]||[]).find(p=>p.player_name===outPlayer);
+  document.getElementById('rc-player-label').textContent=(playerObj?'#'+playerObj.player_no+' ':'')+outPlayer+' has received a RED CARD';
+  document.getElementById('rc-team-label').textContent=team;
+  const subs=SUB_PLAYERS[team]||[];
+  const btnDiv=document.getElementById('rc-sub-btns');
+  btnDiv.innerHTML=subs.length?subs.map(p=>`<button class="rc-sub-btn" onclick="selRcIn('${p.player_name}',${p.player_no},this)">#${p.player_no} ${p.player_name}</button>`).join(''):'<span style="color:#94a3b8;font-size:12px;">No bench players</span>';
+  document.getElementById('rc-in-jersey').value='';document.getElementById('rc-in-name').value='';
+  document.getElementById('redcard-modal').style.display='flex';
+}
+function selRcIn(name,no,btn){
+  document.getElementById('rc-in-name').value=name;document.getElementById('rc-in-jersey').value=no;
+  document.querySelectorAll('.rc-sub-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+}
+async function confirmRedCardSub(){
+  const inJersey=document.getElementById('rc-in-jersey').value;
+  const inName=document.getElementById('rc-in-name').value.trim();
+  if(!inJersey&&!inName){alert('Select or enter replacement player');return;}
+  const payload={team:_rcTeam,out_player:_rcOutPlayer,in_player:inName,timer_second:getElapsed()};
+  if(inJersey)payload.in_jersey=parseInt(inJersey);
+  const res=await fetch('/api/football/'+EID+'/substitute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await res.json();
+  if(d.success){closeModal('redcard-modal');location.reload();}else alert(d.error||'Error');
+}
+
+async function undoLastEvent() {
+  if (!confirm('Undo the last recorded event?')) return;
+  const res = await fetch('/api/football/' + EID + '/undo', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+  const d = await res.json();
+  if (d.success) { showToast('↩ Undone: ' + d.undone, '#f59e0b'); setTimeout(() => location.reload(), 800); }
+  else showToast('❌ ' + (d.error || 'Nothing to undo'), '#ef4444');
+}
+
+async function endMatch(){
+  if(!confirm('End match — Full Time?'))return;
+  const res=await fetch('/api/football/'+EID+'/end',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const d=await res.json();
+  if(!d.success){alert('Error ending match');return;}
+  if(d.is_draw){
+    const doPenalty=confirm('⚽ Match is a DRAW ('+d.score+')!\n\nStart Penalty Shootout?\n\nOK → Shootout\nCancel → End as Draw');
+    if(doPenalty){openPenaltyModal('initial');}
+    else{
+      const res2=await fetch('/api/football/'+EID+'/end',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force_draw:true})});
+      const d2=await res2.json();
+      alert('Match ended: '+d.result);location.reload();
+    }
+  }else{alert('Match ended! '+d.result);location.reload();}
+}
+
+let _penaltyMode='initial';
+function openPenaltyModal(mode){
+  _penaltyMode=mode||'initial';
+  const isSudden=(_penaltyMode==='newround');
+  document.getElementById('pen-round-label').textContent=isSudden?'⚡ Sudden Death':'🥅 Penalty Shootout — Select 5 Players Each';
+  document.getElementById('pen-t1-label').textContent=(TEAM1||'Team 1')+(isSudden?' — Select players':' — Select 5');
+  document.getElementById('pen-t2-label').textContent=(TEAM2||'Team 2')+(isSudden?' — Select players':' — Select 5');
+  document.getElementById('pen-start-btn').textContent=isSudden?'⚡ Start Sudden Death':'🥅 Start Penalty Shootout';
+  document.getElementById('pen-start-btn').onclick=isSudden?startNewRound:startPenaltyShootout;
+  const t1=ALL_PLAYERS[TEAM1]||[],t2=ALL_PLAYERS[TEAM2]||[];
+  const checkName=isSudden?'nr_pen':'pen';
+  const bannedT1=new Set((BANNED_PLAYERS[TEAM1]||[]).map(p=>p.player_name));
+  const bannedT2=new Set((BANNED_PLAYERS[TEAM2]||[]).map(p=>p.player_name));
+  const usedT1=isSudden?new Set(PENALTY_USED[TEAM1]||[]):new Set();
+  const usedT2=isSudden?new Set(PENALTY_USED[TEAM2]||[]):new Set();
+  function buildChecks(players,teamKey){
+    const banned=teamKey==='t1'?bannedT1:bannedT2;
+    const used=teamKey==='t1'?usedT1:usedT2;
+    return players.map(p=>{
+      const isBanned=banned.has(p.player_name);const isUsed=used.has(p.player_name);const disabled=isBanned||isUsed;
+      let badge=isBanned?'<span style="font-size:10px;background:rgba(239,68,68,.2);color:#f87171;border-radius:3px;padding:1px 5px;margin-left:4px;">🚫 BANNED</span>':isUsed?'<span style="font-size:10px;background:rgba(100,116,139,.2);color:#94a3b8;border-radius:3px;padding:1px 5px;margin-left:4px;">⛔ Used</span>':'';
+      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:${disabled?'not-allowed':'pointer'};opacity:${disabled?'0.45':'1'};">
+        <input type="checkbox" name="${checkName}_${teamKey}" value="${p.player_name}" style="accent-color:#7c3aed;width:15px;height:15px;" onchange="enforceMaxPen(this,'${checkName}_${teamKey}',${isSudden?99:5});updatePenSelCount()" ${disabled?'disabled':''}/>
+        <span>#${p.player_no} ${p.player_name}${badge}</span></label>`;
+    }).join('');
+  }
+  document.getElementById('pen-t1-players').innerHTML=buildChecks(t1,'t1');
+  document.getElementById('pen-t2-players').innerHTML=buildChecks(t2,'t2');
+  document.getElementById('pen-selection-status').textContent='';
+  // Reset button state — will re-evaluate once checkboxes are set
+  const _startBtn=document.getElementById('pen-start-btn');
+  if(_startBtn){_startBtn.disabled=true;_startBtn.style.opacity='0.45';}
+  updatePenSelCount();
+  document.getElementById('penalty-modal').style.display='flex';
+}
+function enforceMaxPen(cb, name, max) {
+  if (!cb.checked) return;
+  const checked = document.querySelectorAll(`input[name="${name}"]:checked`);
+  if (checked.length > max) {
+    cb.checked = false;
+    if (max === 5) {
+      const s = document.getElementById('pen-selection-status');
+      if (s) { s.textContent = '⚠ Max 5 players per team!'; s.style.color = '#ef4444'; }
+      setTimeout(updatePenSelCount, 1200);
+    }
+  }
+}
+function updatePenSelCount(){
+  const isSudden=(_penaltyMode==='newround');const checkName=isSudden?'nr_pen':'pen';
+  const t1c=document.querySelectorAll(`input[name="${checkName}_t1"]:checked`).length;
+  const t2c=document.querySelectorAll(`input[name="${checkName}_t2"]:checked`).length;
+  const ok=isSudden?(t1c>=1&&t2c>=1):(t1c===5&&t2c===5);
+  const s=document.getElementById('pen-selection-status');
+  const btn=document.getElementById('pen-start-btn');
+  const lbl1=document.getElementById('pen-t1-label');const lbl2=document.getElementById('pen-t2-label');
+  if(!isSudden){
+    const t1msg=t1c<5?`${TEAM1}: ${t1c}/5 (need ${5-t1c} more)`:t1c>5?`${TEAM1}: ${t1c}/5 (too many)`:`${TEAM1}: \u2705 5/5`;
+    const t2msg=t2c<5?`${TEAM2}: ${t2c}/5 (need ${5-t2c} more)`:t2c>5?`${TEAM2}: ${t2c}/5 (too many)`:`${TEAM2}: \u2705 5/5`;
+    s.innerHTML=`<span style="margin-right:16px;">${t1msg}</span><span>${t2msg}</span>`;
+    s.style.color=ok?'#10b981':'#f97316';
+    if(lbl1)lbl1.innerHTML=`${TEAM1||'Team 1'} <span style="color:${t1c===5?'#10b981':'#f97316'};font-weight:900;">${t1c}/5</span>`;
+    if(lbl2)lbl2.innerHTML=`${TEAM2||'Team 2'} <span style="color:${t2c===5?'#10b981':'#f97316'};font-weight:900;">${t2c}/5</span>`;
+    if(btn){btn.disabled=!ok;btn.style.opacity=ok?'1':'0.45';btn.title=ok?'':'Select exactly 5 players from each team';}
+  } else {
+    s.textContent=`${TEAM1}: ${t1c}  |  ${TEAM2}: ${t2c}`;
+    s.style.color=ok?'#10b981':'#f97316';
+    if(lbl1)lbl1.innerHTML=`${TEAM1||'Team 1'} <span style="color:#f97316;font-weight:900;">${t1c} ✓</span>`;
+    if(lbl2)lbl2.innerHTML=`${TEAM2||'Team 2'} <span style="color:#f97316;font-weight:900;">${t2c} ✓</span>`;
+    if(btn){btn.disabled=!ok;btn.style.opacity=ok?'1':'0.45';}
+  }
+}
+function closePenaltyModal(){document.getElementById('penalty-modal').style.display='none';}
+async function startPenaltyShootout(){
+  const t1sel=[...document.querySelectorAll('input[name="pen_t1"]:checked')].map(e=>e.value);
+  const t2sel=[...document.querySelectorAll('input[name="pen_t2"]:checked')].map(e=>e.value);
+  if(t1sel.length!==5){alert('Select exactly 5 players from '+TEAM1);return;}
+  if(t2sel.length!==5){alert('Select exactly 5 players from '+TEAM2);return;}
+  closePenaltyModal();
+  const res=await fetch('/api/football/'+EID+'/penalty/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({team1_players:t1sel,team2_players:t2sel})});
+  const d=await res.json();
+  if(d.success)location.reload();else alert('Error: '+(d.error||'Unknown'));
+}
+async function startNewRound(){
+  const t1sel=[...document.querySelectorAll('input[name="nr_pen_t1"]:checked')].map(e=>e.value);
+  const t2sel=[...document.querySelectorAll('input[name="nr_pen_t2"]:checked')].map(e=>e.value);
+  if(t1sel.length<1){alert('Select at least 1 player from '+TEAM1);return;}
+  if(t2sel.length<1){alert('Select at least 1 player from '+TEAM2);return;}
+  closePenaltyModal();
+  const res=await fetch('/api/football/'+EID+'/penalty/new_round',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({team1_players:t1sel,team2_players:t2sel})});
+  const d=await res.json();
+  if(d.success)location.reload();else alert('Error: '+(d.error||'Unknown'));
+}
+async function recordPenaltyKick(kickId,result){
+  const res=await fetch('/api/football/'+EID+'/penalty/kick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kick_id:kickId,result:result})});
+  const d=await res.json();
+  if(!d.success){alert('Error recording kick');return;}
+  if(d.winner){alert('🏆 Penalty Winner: '+d.winner+'!');location.reload();}
+  else if(d.next_round){const rnd=d.state&&d.state.penalty_shootout?d.state.penalty_shootout.round_no:'?';alert('⚡ Still tied! Sudden Death — Round '+rnd);openPenaltyModal('newround');}
+  else location.reload();
+}
+
+let _subTeam=null;
+function openSubModal(team){
+  _subTeam=team;document.getElementById('sub-team-lbl').textContent=team;
+  const active=ACTIVE_PLAYERS[team]||[];const subs=SUB_PLAYERS[team]||[];
+  document.getElementById('sub-out-btns').innerHTML=active.map(p=>`<button class="sub-out-btn" onclick="selSubOut('${p.player_name}',${p.player_no},this)">#${p.player_no} ${p.player_name}</button>`).join('');
+  document.getElementById('sub-in-btns').innerHTML=subs.length?subs.map(p=>`<button class="sub-in-btn" onclick="selSubIn('${p.player_name}',${p.player_no},this)">#${p.player_no} ${p.player_name}</button>`).join(''):'<span style="font-size:12px;color:var(--muted);">No bench players</span>';
+  ['sub-out-jersey','sub-out-name','sub-in-jersey','sub-in-name'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('sub-modal').style.display='flex';
+}
+function selSubOut(name,no,btn){
+  document.getElementById('sub-out-name').value=name;document.getElementById('sub-out-jersey').value=no;
+  document.querySelectorAll('.sub-out-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+}
+function selSubIn(name,no,btn){
+  document.getElementById('sub-in-name').value=name;document.getElementById('sub-in-jersey').value=no;
+  document.querySelectorAll('.sub-in-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+}
+async function confirmSub(){
+  const outJ=document.getElementById('sub-out-jersey').value;const outN=document.getElementById('sub-out-name').value;
+  const inJ=document.getElementById('sub-in-jersey').value;const inN=document.getElementById('sub-in-name').value.trim();
+  if(!outJ&&!outN){alert('Select player going out');return;}
+  if(!inJ&&!inN){alert('Select or enter player coming in');return;}
+  const payload={team:_subTeam,out_player:outN||'',in_player:inN||'',timer_second:getElapsed()};
+  if(outJ)payload.out_jersey=parseInt(outJ);if(inJ)payload.in_jersey=parseInt(inJ);
+  const res=await fetch('/api/football/'+EID+'/substitute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await res.json();
+  if(d.success)location.reload();else alert(d.error||'Error');
+}
+
+function closeModal(id){document.getElementById(id).style.display='none';}
+document.addEventListener('DOMContentLoaded',()=>{
+  buildPlayerBtns(TEAM1);
+  const asc=document.getElementById('assist-section');if(asc)asc.style.display='block';
+  document.querySelectorAll('[id$="-modal"]').forEach(m=>{
+    m.addEventListener('click',e=>{if(e.target===m)m.style.display='none';});
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Create Admin Account — Athena-X</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script>(function(){var t=localStorage.getItem('athena-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;background:#080c14;font-family:var(--font-main,sans-serif);}
+    .page{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+
+    /* LEFT BRANDING */
+    .left{background:linear-gradient(155deg,#0a0e1a 0%,#130a1e 50%,#1a0a2e 100%);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;}
+    .left::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(147,51,234,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(147,51,234,0.06) 1px,transparent 1px);background-size:40px 40px;}
+    .left::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 40% 45%,rgba(147,51,234,0.12) 0%,transparent 65%);}
+    .left-inner{position:relative;z-index:1;text-align:center;max-width:360px;}
+    .shield-icon{font-size:80px;display:block;margin-bottom:18px;filter:drop-shadow(0 0 32px rgba(147,51,234,0.5));}
+    .admin-title{font-size:36px;font-weight:900;color:#f8fafc;letter-spacing:-1px;margin-bottom:6px;}
+    .admin-title span{background:linear-gradient(135deg,#dc2626,#9333ea);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .admin-sub{font-size:15px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:32px;}
+    .warn-box{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:16px 18px;text-align:left;}
+    .warn-title{font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+    .warn-item{font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:5px;padding-left:14px;position:relative;}
+    .warn-item::before{content:'•';position:absolute;left:0;color:#f59e0b;}
+
+    /* RIGHT FORM */
+    .right{background:#0d111c;border-left:1px solid rgba(147,51,234,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 56px;overflow-y:auto;}
+    .form-box{width:100%;max-width:460px;}
+    .admin-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;color:#a855f7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:22px;}
+    .form-heading{font-size:28px;font-weight:900;color:#f8fafc;margin-bottom:6px;}
+    .form-sub{font-size:14px;color:rgba(255,255,255,0.45);margin-bottom:24px;}
+    .flash-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:16px;}
+    .flash-success{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);color:#4ade80;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:16px;}
+    .sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,0.35);display:flex;align-items:center;gap:8px;margin:18px 0 12px;}
+    .sec-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.08);}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .fgroup{margin-bottom:14px;}
+    .fgroup label{display:block;font-size:13px;font-weight:600;color:rgba(255,255,255,0.55);margin-bottom:6px;}
+    .req{color:#ef4444;}
+    .pw-wrap{position:relative;}
+    .fgroup input,.frow .fgroup input{width:100%;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;color:#f8fafc;padding:10px 14px;font-size:14px;outline:none;transition:.15s;}
+    .pw-wrap input{padding-right:42px;}
+    .fgroup input:focus{border-color:#9333ea;box-shadow:0 0 0 3px rgba(147,51,234,.12);}
+    .fgroup input::placeholder{color:rgba(255,255,255,0.2);}
+    .fgroup input.is-valid{border-color:#22c55e;}
+    .fgroup input.is-invalid{border-color:#ef4444;}
+    /* Eye toggle */
+    .pw-eye{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:16px;padding:4px;border-radius:5px;transition:.15s;line-height:1;}
+    .pw-eye:hover{color:rgba(255,255,255,0.7);}
+    /* Strength bar */
+    .strength-bar-wrap{height:4px;background:rgba(255,255,255,0.08);border-radius:99px;margin-top:8px;overflow:hidden;}
+    .strength-bar{height:100%;border-radius:99px;transition:width .3s,background .3s;width:0%;}
+    .strength-label{font-size:11px;font-weight:700;margin-top:5px;transition:color .3s;}
+    /* Requirements checklist */
+    .pw-reqs{margin-top:10px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:9px;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;}
+    .pw-req{font-size:11px;color:rgba(255,255,255,0.35);display:flex;align-items:center;gap:5px;transition:color .2s;}
+    .pw-req.ok{color:#4ade80;}
+    .pw-req.fail{color:rgba(255,255,255,0.35);}
+    .pw-req-icon{font-size:12px;flex-shrink:0;}
+    /* Key field */
+    .key-box{background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:16px;margin-bottom:14px;}
+    .key-box-title{font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .key-input{border-color:rgba(245,158,11,0.35) !important;width:100%;background:rgba(255,255,255,0.05);border:1.5px solid rgba(245,158,11,0.35);border-radius:9px;color:#f8fafc;padding:10px 14px;font-size:14px;outline:none;}
+    .key-input:focus{border-color:#f59e0b !important;box-shadow:0 0 0 3px rgba(245,158,11,.1) !important;}
+    .key-hint{font-size:11px;color:rgba(245,158,11,0.7);margin-top:7px;display:flex;align-items:center;gap:5px;}
+    .btn-create{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,#dc2626,#9333ea);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;margin-top:4px;}
+    .btn-create:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(147,51,234,.3);}
+    .btn-create:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+    .links-row{display:flex;flex-direction:column;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.07);}
+    .links-row a{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.4);text-decoration:none;transition:.15s;padding:9px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.07);}
+    .links-row a:hover{color:rgba(255,255,255,0.75);border-color:rgba(255,255,255,0.15);}
+    .link-primary{border-color:rgba(147,51,234,0.25) !important;color:#a855f7 !important;}
+    .link-primary:hover{border-color:rgba(147,51,234,0.5) !important;color:#c084fc !important;}
+    .link-viewer{border-color:rgba(56,189,248,0.2) !important;color:#38bdf8 !important;}
+    .link-viewer:hover{border-color:rgba(56,189,248,0.4) !important;}
+    /* Username constraints */
+    .field-hint{font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;}
+    /* Confirm match indicator */
+    .confirm-match{font-size:11px;font-weight:700;margin-top:5px;}
+    @media(max-width:768px){.page{grid-template-columns:1fr;}.left{display:none;}.right{padding:28px 20px;background:#080c14;border-left:none;}.frow{grid-template-columns:1fr;}.pw-reqs{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- LEFT: BRANDING -->
+  <div class="left">
+    <div class="left-inner">
+      <span class="shield-icon">🔑</span>
+      <div class="admin-title">Admin<span> Registration</span></div>
+      <div class="admin-sub">Restricted to authorised personnel only.<br>A valid signup key is required.</div>
+      <div class="warn-box">
+        <div class="warn-title">⚠️ Before you continue</div>
+        <div class="warn-item">You must have a valid Admin Signup Key</div>
+        <div class="warn-item">Contact your system administrator to obtain one</div>
+        <div class="warn-item">Admin accounts have full system access</div>
+        <div class="warn-item">All admin activity is logged and auditable</div>
+        <div class="warn-item">Not an admin? Use the viewer signup instead</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: FORM -->
+  <div class="right">
+    <div class="form-box">
+      <a href="/admin/login" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.45);text-decoration:none;margin-bottom:18px;" onmouseover="this.style.color='#a855f7'" onmouseout="this.style.color='rgba(255,255,255,0.45)'">← Back to Login</a>
+      <div class="admin-badge">🛡️ Admin Portal — New Account</div>
+      <div class="form-heading">Create Admin Account</div>
+      <div class="form-sub">Fill in your details and provide the secret admin signup key</div>
+
+      {% with msgs = get_flashed_messages(with_categories=true) %}{% if msgs %}{% for cat, msg in msgs %}<div class="flash-{{ cat }}">{{ msg }}</div>{% endfor %}{% endif %}{% endwith %}
+
+      <form method="POST" action="/admin/signup" id="signup-form" novalidate>
+        <div class="sec-label">Account Details</div>
+        <div class="frow">
+          <div class="fgroup">
+            <label>Full Name</label>
+            <input type="text" name="full_name" id="full-name" placeholder="e.g. John Doe" autocomplete="name" maxlength="80" pattern="[A-Za-z ]+" title="Name must contain letters only" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"/>
+          </div>
+          <div class="fgroup">
+            <label>Username <span class="req">*</span></label>
+            <input type="text" name="username" id="username" required placeholder="Letters, numbers, _ only" autocomplete="username"
+                   minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+" title="Username: letters, numbers and underscore only" oninput="this.value=this.value.replace(/[^A-Za-z0-9_]/g,'');validateUsername()"/>
+            <div class="field-hint" id="username-hint">3–30 chars, letters/numbers/underscore only</div>
+          </div>
+        </div>
+        <div class="fgroup">
+          <label>Email Address <span class="req">*</span></label>
+          <input type="email" name="email" id="email" required placeholder="admin@example.com" autocomplete="email" maxlength="120"/>
+        </div>
+
+        <div class="sec-label">Set Password</div>
+
+        <!-- Password field with strength meter -->
+        <div class="fgroup">
+          <label>Password <span class="req">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" name="password" id="password" required placeholder="Min 8 characters"
+                   autocomplete="new-password" minlength="8" oninput="checkPasswordStrength()"/>
+            <button type="button" class="pw-eye" onclick="togglePw('password','eye1')" id="eye1" title="Show/hide">👁</button>
+          </div>
+          <div class="strength-bar-wrap"><div class="strength-bar" id="strength-bar"></div></div>
+          <div class="strength-label" id="strength-label" style="color:rgba(255,255,255,0.25);">Enter a password</div>
+          <div class="pw-reqs" id="pw-reqs">
+            <div class="pw-req fail" id="req-len"><span class="pw-req-icon">○</span> 8+ characters</div>
+            <div class="pw-req fail" id="req-upper"><span class="pw-req-icon">○</span> Uppercase letter</div>
+            <div class="pw-req fail" id="req-lower"><span class="pw-req-icon">○</span> Lowercase letter</div>
+            <div class="pw-req fail" id="req-num"><span class="pw-req-icon">○</span> Number</div>
+            <div class="pw-req fail" id="req-special"><span class="pw-req-icon">○</span> Special char (!@#$…)</div>
+            <div class="pw-req fail" id="req-nouser"><span class="pw-req-icon">○</span> Not your username</div>
+          </div>
+        </div>
+
+        <!-- Confirm password -->
+        <div class="fgroup">
+          <label>Confirm Password <span class="req">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" name="confirm_password" id="confirm-password" required placeholder="Repeat password"
+                   autocomplete="new-password" oninput="checkConfirm()"/>
+            <button type="button" class="pw-eye" onclick="togglePw('confirm-password','eye2')" id="eye2" title="Show/hide">👁</button>
+          </div>
+          <div class="confirm-match" id="confirm-match"></div>
+        </div>
+
+        <div class="sec-label">Authorization</div>
+        <div class="key-box">
+          <div class="key-box-title">🔒 Admin Signup Key Required</div>
+          <div class="pw-wrap">
+            <input type="password" name="signup_key" id="signup-key" required placeholder="Enter the secret admin key"
+                   class="key-input" style="width:100%;padding-right:42px;"/>
+            <button type="button" class="pw-eye" onclick="togglePw('signup-key','eye3')" id="eye3" title="Show/hide">👁</button>
+          </div>
+          <div class="key-hint">⚠️ Contact your system admin if you don't have this key</div>
+        </div>
+
+        <button type="submit" class="btn-create" id="submit-btn">Create Admin Account 🛡️</button>
+      </form>
+
+      <div class="links-row">
+        <a href="/admin/login" class="link-primary">← Already have an account? Sign in</a>
+        <a href="/register" class="link-viewer">👁️ Viewer signup instead →</a>
+        <a href="/">← Back to public site</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ── Eye toggles ── */
+function togglePw(fieldId,eyeId){
+  const inp=document.getElementById(fieldId),eye=document.getElementById(eyeId);
+  if(inp.type==='password'){inp.type='text';eye.textContent='🙈';}
+  else{inp.type='password';eye.textContent='👁';}
+}
+
+/* ── Username validation ── */
+function validateUsername(){
+  const inp=document.getElementById('username');
+  const v=inp.value;
+  const ok=/^[a-zA-Z0-9_]{3,30}$/.test(v);
+  inp.classList.toggle('is-valid',ok);
+  inp.classList.toggle('is-invalid',v.length>0&&!ok);
+}
+
+/* ── Password strength ── */
+function checkPasswordStrength(){
+  const pw=document.getElementById('password').value;
+  const user=document.getElementById('username').value.toLowerCase();
+  const bar=document.getElementById('strength-bar');
+  const lbl=document.getElementById('strength-label');
+
+  const checks={
+    len: pw.length>=8,
+    upper:/[A-Z]/.test(pw),
+    lower:/[a-z]/.test(pw),
+    num:/[0-9]/.test(pw),
+    special:/[^a-zA-Z0-9]/.test(pw),
+    nouser: pw.length>0&&(!user||!pw.toLowerCase().includes(user))
+  };
+
+  // Update requirement indicators
+  setReq('req-len',checks.len);
+  setReq('req-upper',checks.upper);
+  setReq('req-lower',checks.lower);
+  setReq('req-num',checks.num);
+  setReq('req-special',checks.special);
+  setReq('req-nouser',checks.nouser);
+
+  // Score
+  const score=Object.values(checks).filter(Boolean).length; // 0-6
+  const pct=Math.round((score/6)*100);
+  bar.style.width=pct+'%';
+
+  if(score<=2){bar.style.background='#ef4444';lbl.style.color='#ef4444';lbl.textContent=score===0?'Enter a password':'Weak';}
+  else if(score===3){bar.style.background='#f97316';lbl.style.color='#f97316';lbl.textContent='Fair';}
+  else if(score===4){bar.style.background='#eab308';lbl.style.color='#eab308';lbl.textContent='Good';}
+  else if(score===5){bar.style.background='#22c55e';lbl.style.color='#22c55e';lbl.textContent='Strong';}
+  else{bar.style.background='linear-gradient(90deg,#22c55e,#00ffb2)';lbl.style.color='#00ffb2';lbl.textContent='Very Strong 🔒';}
+
+  const inp=document.getElementById('password');
+  inp.classList.toggle('is-valid',score>=5&&checks.len);
+  inp.classList.toggle('is-invalid',pw.length>0&&score<3);
+  checkConfirm();
+}
+
+function setReq(id,ok){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.classList.toggle('ok',ok);
+  el.classList.toggle('fail',!ok);
+  el.querySelector('.pw-req-icon').textContent=ok?'✓':'○';
+}
+
+/* ── Confirm password ── */
+function checkConfirm(){
+  const pw=document.getElementById('password').value;
+  const cf=document.getElementById('confirm-password').value;
+  const el=document.getElementById('confirm-match');
+  const inp=document.getElementById('confirm-password');
+  if(!cf){el.textContent='';inp.classList.remove('is-valid','is-invalid');return;}
+  if(pw===cf){
+    el.textContent='✓ Passwords match';el.style.color='#4ade80';
+    inp.classList.add('is-valid');inp.classList.remove('is-invalid');
+  }else{
+    el.textContent='✗ Passwords do not match';el.style.color='#f87171';
+    inp.classList.remove('is-valid');inp.classList.add('is-invalid');
+  }
+}
+
+/* ── Form submission guard ── */
+document.getElementById('signup-form').addEventListener('submit',function(e){
+  const pw=document.getElementById('password').value;
+  const cf=document.getElementById('confirm-password').value;
+  const user=document.getElementById('username').value;
+
+  if(pw!==cf){e.preventDefault();alert('Passwords do not match.');return;}
+  if(pw.length<8){e.preventDefault();alert('Password must be at least 8 characters.');return;}
+
+  const upper=/[A-Z]/.test(pw),lower=/[a-z]/.test(pw),num=/[0-9]/.test(pw),special=/[^a-zA-Z0-9]/.test(pw);
+  const score=[upper,lower,num,special].filter(Boolean).length;
+  if(score<3){e.preventDefault();alert('Password is too weak. Use uppercase, lowercase, numbers and special characters.');return;}
+  if(user&&pw.toLowerCase().includes(user.toLowerCase())){e.preventDefault();alert('Password must not contain your username.');return;}
+  if(!/^[a-zA-Z0-9_]{3,30}$/.test(user)){e.preventDefault();alert('Username must be 3–30 characters using letters, numbers or underscores only.');return;}
+});
+</script>
+</body>
+</html>

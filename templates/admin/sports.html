@@ -1,0 +1,86 @@
+{% extends "admin/base.html" %}
+{% block title %}Sports{% endblock %}
+{% block page_title %}🏆 Sports Management{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin" class="btn btn-secondary btn-sm">← Dashboard</a>
+{% endblock %}
+{% block content %}
+
+<div style="display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start;">
+
+  <!-- Add Sport -->
+  <div class="form-card">
+    <h3 style="display:flex;align-items:center;gap:8px;">➕ Add New Sport</h3>
+    <form method="POST" action="/admin/sports/add">
+      <div class="form-group">
+        <label>Sport Name <span style="color:#ef4444;">*</span></label>
+        <input type="text" name="name" required placeholder="e.g. Tennis, Athletics" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')" pattern="[A-Za-z ]+" title="Sport name: letters only"/>
+      </div>
+      <div class="form-group">
+        <label>Icon (emoji)</label>
+        <input type="text" name="icon" value="🏆" placeholder="🏆" maxlength="5"/>
+        <div class="emoji-quick" style="margin-top:8px;">
+          {% for e in ['🏏','⚽','🏀','🏐','🏸','🎾','🏓','🥊','🏋️','🤼','🏊','🚴','🤸','🏑','🎯'] %}
+            <span class="eq" onclick="this.closest('form').querySelector('[name=icon]').value='{{ e }}'">{{ e }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description <span style="font-weight:400;color:var(--muted2);font-size:11px;">(optional)</span></label>
+        <textarea name="description" rows="2" placeholder="Brief description..." style="width:100%;background:var(--input-bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);padding:10px 14px;font-size:14px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Add Sport</button>
+    </form>
+  </div>
+
+  <!-- Sports List -->
+  <div>
+    <div class="dash-section" style="border-radius:14px;overflow:hidden;">
+      <div class="ds-head">
+        <h3>🏟️ All Sports <span style="font-size:12px;color:var(--muted2);font-weight:400;margin-left:6px;">({{ sports|length }})</span></h3>
+      </div>
+      <div style="padding:12px;">
+        {% if sports %}
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for s in sports %}
+          <div style="background:var(--bg3);border:1px solid {% if s.is_active %}var(--border){% else %}rgba(239,68,68,0.2){% endif %};border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:.15s;{% if not s.is_active %}opacity:.6;{% endif %}">
+            <div style="font-size:32px;flex-shrink:0;line-height:1;">{{ s.icon }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:var(--text);">{{ s.name }}</div>
+              {% if s.description %}<div style="font-size:12px;color:var(--muted2);margin-top:2px;">{{ s.description }}</div>{% endif %}
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+                {{ s.event_count }} event{{ 's' if s.event_count != 1 else '' }}
+                {% if s.is_active %}
+                  · <span style="color:#22c55e;font-weight:700;">Active</span>
+                {% else %}
+                  · <span style="color:#f87171;font-weight:700;">Inactive</span>
+                {% endif %}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <form method="POST" action="/admin/sports/{{ s.id }}/toggle" style="display:inline;">
+                <button class="tbl-btn {% if s.is_active %}tbl-btn-green{% endif %}" title="Toggle active">
+                  {{ '✅ Active' if s.is_active else '❌ Inactive' }}
+                </button>
+              </form>
+              <form method="POST" action="/admin/sports/{{ s.id }}/delete" style="display:inline;"
+                    onsubmit="return confirm('Delete {{ s.name }}? This cannot be undone.')">
+                <button class="tbl-btn tbl-btn-red" title="Delete sport">🗑</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="padding:40px;text-align:center;">
+          <div style="font-size:40px;margin-bottom:12px;">🏆</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px;">No sports yet</div>
+          <div style="font-size:13px;color:var(--muted2);">Add your first sport using the form on the left.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

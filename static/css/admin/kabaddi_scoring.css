@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Kabaddi Scoring Page
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes blink { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }
+
+/* ── Raid outcome buttons ── */
+.outcome-btn {
+  padding:10px 14px; background:var(--bg3); border:2px solid var(--border);
+  border-radius:10px; color:var(--text); cursor:pointer; text-align:center;
+  min-width:110px; font-size:13px; font-weight:700; transition:all .15s; line-height:1.3;
+}
+.outcome-btn.active {
+  border-color:var(--accent);
+  background:rgba(96,165,250,.12); color:var(--accent);
+}
+
+/* ── Raider selection ── */
+.raider-btn {
+  padding:7px 11px; background:var(--bg3); border:2px solid var(--border);
+  border-radius:8px; color:var(--text); cursor:pointer; font-size:12px;
+  font-weight:600; transition:all .1s;
+}
+.raider-btn.selected { border-color:#60a5fa; background:rgba(96,165,250,.15); color:#60a5fa; }
+.raider-btn.out-p    { opacity:.35; cursor:not-allowed; text-decoration:line-through; }
+
+/* ── Defender selection ── */
+.def-btn {
+  padding:7px 11px; background:var(--bg3); border:2px solid var(--border);
+  border-radius:8px; color:var(--text); cursor:pointer; font-size:12px;
+  font-weight:600; transition:all .1s;
+}
+.def-btn.touched { border-color:#ef4444; background:rgba(239,68,68,.15); color:#ef4444; }
+.def-btn.out-p   { opacity:.35; cursor:not-allowed; text-decoration:line-through; }
+
+/* ── Tackler selection ── */
+.tackler-btn {
+  padding:7px 11px; background:var(--bg3); border:2px solid var(--border);
+  border-radius:8px; color:var(--text); cursor:pointer; font-size:12px;
+  font-weight:600; transition:all .1s;
+}
+.tackler-btn.selected { border-color:#f97316; background:rgba(249,115,22,.15); color:#f97316; }
+
+/* ── Player row ── */
+.prow {
+  display:flex; align-items:center; gap:7px;
+  padding:5px 0; border-bottom:1px solid var(--border); font-size:12px;
+}
+
+/* ── 30-second Raid Clock ── */
+#raid-clock {
+  transition: color .3s;
+}
+#raid-clock-bar {
+  transition: width .2s linear, background .3s;
+}
+#raid-expired-badge {
+  animation: blink 0.7s infinite;
+}
+
+/* ── Match Stats Panel ── */
+#match-stats-panel > div {
+  transition: box-shadow .2s;
+}
+#match-stats-panel > div:hover {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+/* ── Stats table Raid % column ── */
+#stats-table td:nth-child(5) {
+  white-space: nowrap;
+}

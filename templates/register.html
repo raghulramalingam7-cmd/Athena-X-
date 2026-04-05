@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Create Viewer Account — Athena-X</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script>(function(){var t=localStorage.getItem('athena-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;background:var(--bg);font-family:var(--font-main,sans-serif);}
+    .page{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+
+    /* ── RIGHT BRANDING ── */
+    .right-brand{
+      background:linear-gradient(155deg,#064e3b 0%,#065f46 40%,#0891b2 100%);
+      position:relative;overflow:hidden;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:60px 48px;order:2;
+    }
+    .right-brand::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 70% 50%,rgba(16,185,129,0.15) 0%,transparent 70%);}
+    .hex{position:absolute;opacity:.07;font-size:120px;animation:float-hex 8s ease-in-out infinite;}
+    .hex1{top:10%;left:5%;animation-delay:0s;}
+    .hex2{bottom:15%;right:8%;animation-delay:3s;}
+    .hex3{top:55%;left:35%;animation-delay:5s;font-size:70px;}
+    @keyframes float-hex{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+    .brand-inner{position:relative;z-index:1;text-align:center;max-width:360px;}
+    .brand-emoji{font-size:80px;display:block;margin-bottom:20px;filter:drop-shadow(0 8px 32px rgba(16,185,129,0.45));}
+    .brand-title{font-size:38px;font-weight:900;color:#f8fafc;letter-spacing:-1px;margin-bottom:8px;}
+    .brand-title span{color:#34d399;}
+    .brand-sub{font-size:15px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:36px;}
+    .steps{display:flex;flex-direction:column;gap:12px;width:100%;}
+    .step{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 18px;}
+    .step-num{width:30px;height:30px;border-radius:50%;background:rgba(52,211,153,0.3);border:1px solid rgba(52,211,153,0.5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#34d399;flex-shrink:0;}
+    .step-text{font-size:13px;color:rgba(255,255,255,0.85);font-weight:600;}
+    .step-sub{font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;}
+
+    /* ── LEFT FORM ── */
+    .left-form{
+      background:var(--bg);display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      padding:48px 56px;order:1;overflow-y:auto;
+    }
+    .form-box{width:100%;max-width:420px;}
+    .role-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.08em;margin-bottom:22px;}
+    .form-heading{font-size:30px;font-weight:900;color:var(--text);margin-bottom:6px;}
+    .form-sub{font-size:14px;color:var(--muted2);margin-bottom:28px;}
+    .flash-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:18px;}
+    .flash-success{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);color:#4ade80;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:18px;}
+    .sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);display:flex;align-items:center;gap:8px;margin:20px 0 14px;}
+    .sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .fgroup{margin-bottom:16px;}
+    .fgroup label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:7px;}
+    .req{color:#ef4444;}
+    .opt{font-weight:400;color:var(--muted2);font-size:11px;margin-left:3px;}
+    .iw{position:relative;}
+    .iw .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.55;pointer-events:none;}
+    .iw input,.fgroup input[type=text],.fgroup input[type=email],.fgroup input[type=tel],.fgroup input[type=password]{
+      width:100%;background:var(--bg3);border:1.5px solid var(--border);
+      border-radius:10px;color:var(--text);padding:11px 14px;font-size:14px;outline:none;transition:.15s;
+    }
+    .iw input{padding-left:40px;}
+    .fgroup input:focus,.iw input:focus{border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.1);}
+    .btn-reg{width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,#059669,#34d399);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;margin-top:4px;}
+    .btn-reg:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(52,211,153,.2);}
+    .login-box{text-align:center;padding:16px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);font-size:14px;color:var(--muted2);margin-top:18px;}
+    .login-box a{color:#34d399;font-weight:700;text-decoration:none;}
+    .admin-hint{text-align:center;margin-top:14px;}
+    .admin-hint a{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);text-decoration:none;padding:6px 14px;border-radius:20px;border:1px solid var(--border);transition:.15s;}
+    .admin-hint a:hover{border-color:rgba(220,38,38,.4);color:#f87171;}
+    @media(max-width:768px){.page{grid-template-columns:1fr;}.right-brand{display:none;}.left-form{padding:32px 24px;order:1;}.frow{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <!-- LEFT: FORM -->
+  <div class="left-form">
+    <div class="form-box">
+      <a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.4);text-decoration:none;margin-bottom:18px;" onmouseover="this.style.color='#34d399'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">← Back to Site</a>
+      <div class="role-badge">👁️ Viewer / Fan Account</div>
+      <div class="form-heading">Join Athena-X 🎉</div>
+      <div class="form-sub">Create your free viewer account and follow the action live</div>
+
+      {% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, msg in msgs %}<div class="flash-{{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}
+
+      <form method="POST" action="/register">
+        <div class="sec-label">Your identity</div>
+        <div class="frow">
+          <div class="fgroup">
+            <label>Full Name <span class="opt">(optional)</span></label>
+            <input type="text" name="full_name" placeholder="Your full name" autocomplete="name" pattern="[A-Za-z ]+" title="Name must contain letters only" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"/>
+          </div>
+          <div class="fgroup">
+            <label>Phone <span class="opt">(optional)</span></label>
+            <input type="tel" name="phone" placeholder="Phone number (digits only)" autocomplete="tel" pattern="[0-9]{7,15}" title="Phone must contain digits only (7–15 digits)" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+          </div>
+        </div>
+        <div class="fgroup">
+          <label>Username <span class="req">*</span></label>
+          <div class="iw"><span class="ic">👤</span><input type="text" name="username" required placeholder="Letters, numbers, _ only" minlength="3" autocomplete="username" pattern="[A-Za-z0-9_]+" title="Username: letters, numbers and underscore only" oninput="this.value=this.value.replace(/[^A-Za-z0-9_]/g,'')"/></div>
+        </div>
+        <div class="fgroup">
+          <label>Email Address <span class="req">*</span></label>
+          <div class="iw"><span class="ic">📧</span><input type="email" name="email" required placeholder="your@email.com" autocomplete="email"/></div>
+        </div>
+        <div class="sec-label">Set your password</div>
+        <div class="frow">
+          <div class="fgroup">
+            <label>Password <span class="req">*</span></label>
+            <input type="password" name="password" required placeholder="Min 6 characters" minlength="6" autocomplete="new-password"/>
+          </div>
+          <div class="fgroup">
+            <label>Confirm Password <span class="req">*</span></label>
+            <input type="password" name="confirm_password" required placeholder="Repeat password" autocomplete="new-password"/>
+          </div>
+        </div>
+        <button type="submit" class="btn-reg">Create Viewer Account →</button>
+      </form>
+
+      <div class="login-box">Already have an account? <a href="/login">Sign in →</a></div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: BRANDING -->
+  <div class="right-brand">
+    <div class="hex hex1">⬡</div><div class="hex hex2">⬡</div><div class="hex hex3">⬡</div>
+    <div class="brand-inner">
+      <span class="brand-emoji">🏅</span>
+      <div class="brand-title">Get<span> Started</span></div>
+      <div class="brand-sub">Join the Athena-X community and never miss a moment of the action.</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div><div class="step-text">Create your free account</div><div class="step-sub">Takes less than a minute</div></div></div>
+        <div class="step"><div class="step-num">2</div><div><div class="step-text">Browse upcoming events</div><div class="step-sub">Across 8 different sports</div></div></div>
+        <div class="step"><div class="step-num">3</div><div><div class="step-text">Register &amp; follow live</div><div class="step-sub">Real-time scores &amp; updates</div></div></div>
+        <div class="step"><div class="step-num">4</div><div><div class="step-text">Climb the leaderboard</div><div class="step-sub">Track your stats &amp; achievements</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

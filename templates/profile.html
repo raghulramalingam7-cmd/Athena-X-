@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ user.full_name or user.username }} — Athena-X{% endblock %}
+{% block content %}
+
+<div class="profile-page">
+
+  <!-- Back Button -->
+  <div style="margin-bottom:12px;">
+    <a href="/" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← Home</a>
+  </div>
+
+  <!-- ── HERO HEADER ── -->
+  <div class="profile-hero anim-in">
+    <div class="profile-avatar" id="profile-avatar">{{ (user.full_name or user.username)[0].upper() }}</div>
+    <div class="profile-info">
+      <h1>{{ user.full_name or user.username }}</h1>
+      <p class="profile-sub">@{{ user.username }} &nbsp;·&nbsp; {{ user.email }}</p>
+      {% if user.phone %}<p class="profile-sub">📞 {{ user.phone }}</p>{% endif %}
+      <p class="joined-date">Member since {{ user.created_at[:10] }}</p>
+    </div>
+  </div>
+
+  <!-- ── STATS CARDS (animated count-up) ── -->
+  {% set total_regs   = registrations | length %}
+  {% set live_regs    = registrations | selectattr('event_status', 'equalto', 'live')      | list | length %}
+  {% set done_regs    = registrations | selectattr('event_status', 'equalto', 'completed') | list | length %}
+  {% set upcoming_regs= registrations | selectattr('event_status', 'equalto', 'upcoming')  | list | length %}
+
+  <div class="profile-stats-row">
+    <div class="profile-stat-card anim-in">
+      <div class="profile-stat-num stat-blue count-up" data-target="{{ total_regs }}">0</div>
+      <div class="profile-stat-lbl">Events</div>
+    </div>
+    <div class="profile-stat-card anim-in">
+      <div class="profile-stat-num stat-green count-up" data-target="{{ live_regs }}">0</div>
+      <div class="profile-stat-lbl">Live Now</div>
+    </div>
+    <div class="profile-stat-card anim-in">
+      <div class="profile-stat-num stat-yellow count-up" data-target="{{ upcoming_regs }}">0</div>
+      <div class="profile-stat-lbl">Upcoming</div>
+    </div>
+    <div class="profile-stat-card anim-in">
+      <div class="profile-stat-num count-up" data-target="{{ done_regs }}">0</div>
+      <div class="profile-stat-lbl">Completed</div>
+    </div>
+  </div>
+
+  <!-- ── REGISTRATIONS ── -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <h2 style="font-family:var(--font-num);font-size:18px;font-weight:700;color:var(--text);">My Registrations</h2>
+    <a href="/matches" class="btn btn-secondary btn-sm">Browse Events</a>
+  </div>
+
+  {% if registrations %}
+  <div class="reg-list">
+    {% for r in registrations %}
+    <a href="/event/{{ r.event_id }}" class="reg-item anim-in">
+      <div class="reg-item-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+            <span class="reg-sport-icon">{{ r.sport_icon or '🏆' }}</span>
+            <div>
+              <div class="reg-event-name">{{ r.title }}</div>
+              <div class="reg-teams">{{ r.team1 }} <span style="color:var(--muted2);margin:0 4px;">vs</span> {{ r.team2 }}</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+          <span class="status-badge status-{{ r.event_status }}">{{ r.event_status | title }}</span>
+          {% if r.event_status == 'live' %}<span class="pulse-dot"></span>{% endif %}
+        </div>
+      </div>
+
+      <div class="reg-meta">
+        {% if r.event_date %}<span>📅 {{ r.event_date }}</span>{% endif %}
+        {% if r.venue %}<span>📍 {{ r.venue }}</span>{% endif %}
+        <span>🏅 {{ r.sport_name or 'Sport' }}</span>
+      </div>
+
+      <div class="reg-tags">
+        <span class="status-badge status-{{ r.status }}">Registration: {{ r.status | title }}</span>
+        {% if r.team_preference %}<span class="tag">Team: {{ r.team_preference }}</span>{% endif %}
+        {% if r.position %}<span class="tag">{{ r.position }}</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state anim-in">
+    <div class="empty-state-icon">🏏</div>
+    <p style="margin-bottom:16px;">You haven't registered for any events yet.</p>
+    <a href="/" class="btn btn-primary">Browse Events</a>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+// ── Animated count-up ──
+function animateCountUp(el) {
+  var target = parseInt(el.dataset.target, 10);
+  if (!target) { el.textContent = '0'; return; }
+  var start = 0, dur = 900, startTime = null;
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    var progress = Math.min((ts - startTime) / dur, 1);
+    var ease = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    el.textContent = Math.round(ease * target);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.classList.add('score-animated');
+  }
+  requestAnimationFrame(step);
+}
+
+// Trigger on intersection
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    if (e.isIntersecting) {
+      animateCountUp(e.target);
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.count-up').forEach(function(el) {
+  observer.observe(el);
+});
+</script>
+{% endblock %}

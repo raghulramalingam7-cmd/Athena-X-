@@ -1,0 +1,395 @@
+{% extends "admin/base.html" %}
+{% block head %}<link rel="stylesheet" href="/static/css/admin/events.css"/>{% endblock %}
+{% block title %}Events{% endblock %}
+{% block page_title %}📅 Events{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin" class="btn btn-secondary btn-sm">← Dashboard</a>
+  <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ New Event</button>
+{% endblock %}
+{% block content %}
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+  <form style="display:flex;gap:8px;flex-wrap:wrap;">
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="all" {% if filter_status=='all' %}selected{% endif %}>All Statuses</option>
+      <option value="upcoming" {% if filter_status=='upcoming' %}selected{% endif %}>Upcoming</option>
+      <option value="live" {% if filter_status=='live' %}selected{% endif %}>Live</option>
+      <option value="completed" {% if filter_status=='completed' %}selected{% endif %}>Completed</option>
+    </select>
+    <select name="sport" class="filter-select" onchange="this.form.submit()">
+      <option value="all" {% if filter_sport=='all' %}selected{% endif %}>All Sports</option>
+      {% for s in sports %}<option value="{{ s.id }}" {% if filter_sport==s.id|string %}selected{% endif %}>{{ s.icon }} {{ s.name }}</option>{% endfor %}
+    </select>
+  </form>
+  <span style="color:var(--muted);font-size:14px;align-self:center;">{{ events|length }} events</span>
+</div>
+<div class="admin-table-wrap">
+<table class="admin-table">
+  <thead><tr><th>Title</th><th>Sport</th><th>Teams</th><th>Date</th><th class="col-venue">Venue</th><th>Status</th><th class="col-regs">Regs</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for ev in events %}
+  <tr>
+    <td data-label="Title"><a href="/admin/events/{{ ev.id }}" style="font-weight:600;">{{ ev.title }}</a></td>
+    <td data-label="Sport">{{ ev.sport_icon or '' }} {{ ev.sport_name or '—' }}</td>
+    <td data-label="Teams" class="muted-cell">{{ ev.team1 }}<br/>vs {{ ev.team2 }}</td>
+    <td data-label="Date" class="muted-cell">{{ ev.event_date or '—' }}{% if ev.event_time %}<br/>{{ ev.event_time }}{% endif %}</td>
+    <td data-label="Venue" class="muted-cell col-venue">{{ ev.venue or '—' }}</td>
+    <td data-label="Status"><span class="status-badge status-{{ ev.status }}">{{ ev.status.title() }}</span></td>
+    <td data-label="Regs" class="col-regs">{{ ev.reg_count }}</td>
+    <td class="td-actions">
+      {% if ev.sport_name %}
+        <a href="{{ sport_admin_url(ev) }}" class="tbl-btn" style="background:rgba(96,165,250,0.15);color:#60a5fa;">▶ Score</a>
+      {% endif %}
+      <a href="/admin/events/{{ ev.id }}" class="tbl-btn">✏ Edit</a>
+      <a href="/event/{{ ev.id }}" target="_blank" class="tbl-btn">👁</a>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<!-- ═══════════════ ADD EVENT MODAL ═══════════════ -->
+<div id="add-modal" class="modal-overlay" style="display:none">
+  <div class="admin-modal" style="max-width:760px;border:1px solid rgba(96,165,250,0.25);box-shadow:0 24px 80px rgba(0,0,0,0.6);">
+    <div class="modal-header" style="background:linear-gradient(135deg,rgba(96,165,250,0.12),rgba(0,200,150,0.15));border-bottom:1px solid rgba(96,165,250,0.2);padding:20px 24px;border-radius:12px 12px 0 0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--accent),#8b5cf6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📅</div>
+        <div>
+          <h2 style="margin:0;font-size:18px;font-weight:800;">Create New Event</h2>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Fill in the match details below</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeAddModal()" style="background:rgba(255,255,255,0.08);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid rgba(255,255,255,0.1);">✕</button>
+    </div>
+    <form method="POST" action="/admin/events/add" id="add-event-form" style="padding:24px;">
+
+      <!-- ─ STEP 1: BASIC INFO ─ -->
+      <div style="font-size:11px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <span style="background:var(--accent);color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">1</span>
+        Basic Information
+      </div>
+
+      <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid var(--border);">
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Sport *</label>
+            <select name="sport_id" id="sport-select" onchange="onSportChange(this)" style="margin-top:6px;">
+              <option value="">— Select Sport —</option>
+              {% for s in sports %}<option value="{{ s.id }}" data-name="{{ s.name|lower }}">{{ s.icon }} {{ s.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Status</label>
+            <select name="status" style="margin-top:6px;">
+              <option value="upcoming">📅 Upcoming</option>
+              <option value="live">🔴 Live</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:4px;">
+          <label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Match Title *</label>
+          <input type="text" name="title" required placeholder="e.g. Colony Cup – Semi Final" style="margin-top:6px;font-size:15px;font-weight:600;"/>
+        </div>
+      </div>
+
+      <!-- ─ STEP 2: TEAMS ─ -->
+      <div style="font-size:11px;font-weight:800;color:#f97316;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">2</span>
+        Teams
+      </div>
+
+      <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid var(--border);">
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size:12px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.5px;">Team 1 *</label>
+            <input type="text" name="team1" id="inp-team1" required oninput="this.value=this.value.replace(/[^A-Za-z0-9 \-]/g,'');syncTeamHeadings()" placeholder="Home team" style="margin-top:6px;border-left:3px solid var(--accent);" title="Team name: letters, numbers, spaces and hyphens only"/>
+          </div>
+          <div class="form-group">
+            <label style="font-size:12px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.5px;">Team 2 *</label>
+            <input type="text" name="team2" id="inp-team2" required oninput="this.value=this.value.replace(/[^A-Za-z0-9 \-]/g,'');syncTeamHeadings()" placeholder="Away team" style="margin-top:6px;border-left:3px solid #f97316;" title="Team name: letters, numbers, spaces and hyphens only"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ STEP 3: SCHEDULE ─ -->
+      <div style="font-size:11px;font-weight:800;color:#10b981;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <span style="background:#10b981;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">3</span>
+        Schedule & Venue
+      </div>
+
+      <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid var(--border);">
+        <div class="form-row">
+          <div class="form-group"><label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Date</label><input type="date" name="event_date" style="margin-top:6px;"/></div>
+          <div class="form-group"><label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Time</label><input type="time" name="event_time" style="margin-top:6px;"/></div>
+        </div>
+        <div class="form-row" style="margin-top:4px;">
+          <div class="form-group"><label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Venue</label><input type="text" name="venue" placeholder="Stadium / Ground name" style="margin-top:6px;" oninput="this.value=this.value.replace(/[^A-Za-z0-9 ,.\-]/g,'')" title="Venue name: letters, numbers, spaces, commas, dots and hyphens only"/></div>
+          <div class="form-group" id="overs-wrap" style="display:none;">
+            <label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Overs per Innings</label>
+            <input type="number" name="total_overs" value="6" min="1" max="50" style="margin-top:6px;"/>
+          </div>
+        </div>
+        <div id="badminton-type-wrap" style="display:none;margin-top:4px;">
+          <div class="form-group">
+            <label style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;">Match Format</label>
+            <select name="match_type" style="margin-top:6px;">
+              <option value="best_of_3">Best of 3</option>
+              <option value="best_of_5">Best of 5</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ STEP 4: PLAYERS ─ -->
+      <div id="sport-setup-section" style="display:none;">
+        <div style="font-size:11px;font-weight:800;color:#00ffb2;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <span style="background:#8b5cf6;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">4</span>
+          <span id="sport-setup-title">Player Setup</span>
+        </div>
+        <div style="background:rgba(0,200,150,0.15);border:1px solid rgba(0,200,150,0.15);border-radius:12px;padding:16px;">
+          <div style="font-size:12px;color:#00ffb2;margin-bottom:14px;" id="sport-hint-text"></div>
+
+          <!-- Team columns -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="team-cols">
+            <div>
+              <div style="font-weight:700;font-size:13px;color:#60a5fa;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid rgba(96,165,250,0.3);" id="col-team1-head">Team 1</div>
+              <div id="col-team1-main"></div>
+              <div id="col-team1-subs-wrap" style="display:none;margin-top:8px;">
+                <div style="font-size:11px;color:#fbbf24;font-weight:700;letter-spacing:0.5px;margin-bottom:5px;">⚡ SUBSTITUTES</div>
+                <div id="col-team1-subs"></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:13px;color:#f97316;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid rgba(249,115,22,0.3);" id="col-team2-head">Team 2</div>
+              <div id="col-team2-main"></div>
+              <div id="col-team2-subs-wrap" style="display:none;margin-top:8px;">
+                <div style="font-size:11px;color:#fbbf24;font-weight:700;letter-spacing:0.5px;margin-bottom:5px;">⚡ SUBSTITUTES</div>
+                <div id="col-team2-subs"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+        <button type="button" class="btn btn-secondary" onclick="closeAddModal()" style="flex:1;">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:2;padding:12px;font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--accent),#8b5cf6);border:none;">
+          📅 Create Event
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ─── Sport configurations ─────────────────────── */
+const SPORT_CFG = {
+  cricket: {
+    main: 11, subs: 5, showImpact: false, showOvers: true,
+    label: '🏏 Playing XI (11 players + 5 substitutes)',
+    hint: 'Enter exactly 11 main players and up to 5 substitutes per team.',
+    roles: ['🧤 WK','🏏 Bat','⚾ Bowl','⭐ AR'],
+    roleVals: ['keeper','batsman','bowler','all-rounder'],
+    defRoles: ['keeper','batsman','batsman','batsman','batsman','batsman','all-rounder','all-rounder','bowler','bowler','bowler'],
+  },
+  kabaddi: {
+    main: 7, subs: 5, showOvers: false,
+    label: '🤼 Squad (7 players + 5 subs)',
+    hint: '7 main players and 5 substitutes per team. No roles required.',
+    roles: null,
+  },
+  football: {
+    main: 11, subs: 5, showOvers: false,
+    label: '⚽ Playing XI (11 + 5 subs)',
+    hint: '11 players + 5 subs per team.',
+    roles: ['GK','DEF','MID','FWD'],
+    roleVals: ['keeper','defender','midfielder','forward'],
+    defRoles: ['keeper','defender','defender','defender','defender','midfielder','midfielder','midfielder','forward','forward','forward'],
+  },
+  soccer: {
+    main: 11, subs: 5, showOvers: false,
+    label: '⚽ Playing XI (11 + 5 subs)',
+    hint: '11 players + 5 subs per team.',
+    roles: ['GK','DEF','MID','FWD'],
+    roleVals: ['keeper','defender','midfielder','forward'],
+    defRoles: ['keeper','defender','defender','defender','defender','midfielder','midfielder','midfielder','forward','forward','forward'],
+  },
+  basketball: {
+    main: 5, subs: 5, showOvers: false,
+    label: '🏀 Starting 5 (+ 5 subs)',
+    hint: '5 starters + 5 substitutes per team.',
+    roles: ['PG','SG','SF','PF','C'],
+    roleVals: ['pg','sg','sf','pf','c'],
+    defRoles: ['pg','sg','sf','pf','c'],
+  },
+  volleyball: {
+    main: 6, subs: 3, showOvers: false,
+    label: '🏐 Starting 6 (+ 3 subs)',
+    hint: '6 starters + 3 substitutes per team.',
+    roles: ['Setter','OH','MB','Libero','RS'],
+    roleVals: ['setter','oh','mb','libero','rs'],
+    defRoles: ['setter','oh','oh','mb','mb','rs'],
+  },
+  badminton: {
+    main: 2, subs: 0, showBadmintonType: true, showOvers: false,
+    label: '🏸 Players (singles: 1 each, doubles: 2 each)',
+    hint: 'For singles enter 1 player per team; for doubles enter 2.',
+    roles: null,
+  },
+};
+
+function detectSport(optName) {
+  const n = (optName || '').toLowerCase();
+  for (const key of Object.keys(SPORT_CFG)) {
+    if (n.includes(key)) return { key, cfg: SPORT_CFG[key] };
+  }
+  return null;
+}
+
+function makeRoleSelect(prefix, idx, cfg, isSub) {
+  if (!cfg.roles) return '';
+  const defRole = (!isSub && cfg.defRoles && cfg.defRoles[idx-1]) ? cfg.defRoles[idx-1] : cfg.roleVals[0];
+  const opts = cfg.roles.map((r,i)=>`<option value="${cfg.roleVals[i]}"${cfg.roleVals[i]===defRole?' selected':''}>${r}</option>`).join('');
+  return `<select name="${prefix}_role" style="padding:3px 5px;font-size:11px;background:var(--bg2);border:1px solid rgba(255,255,255,0.1);color:var(--text);border-radius:4px;">${opts}</select>`;
+}
+
+function makeRow(teamKey, idx, isSub, cfg) {
+  const prefix = isSub ? `${teamKey}_sub${idx}` : `${teamKey}_p${idx}`;
+  const num = isSub ? `S${idx}` : idx;
+  const ph = isSub ? `Sub ${idx}` : `Player ${idx}`;
+  const rs = makeRoleSelect(prefix, idx, cfg, isSub);
+  const gridCols = cfg.roles ? '18px 1fr 72px' : '18px 1fr';
+  const numColor = isSub ? '#fbbf24' : 'var(--muted)';
+  return `<div style="display:grid;grid-template-columns:${gridCols};gap:4px;align-items:center;margin-bottom:4px;">
+    <span style="font-size:11px;color:${numColor};text-align:right;">${num}</span>
+    <input type="text" name="${prefix}_name" placeholder="${ph}" pattern="[A-Za-z ]+" title="Name must contain letters only" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')" style="padding:4px 6px;font-size:12px;background:var(--bg2);border:1px solid rgba(255,255,255,0.1);color:var(--text);border-radius:4px;width:100%;"/>
+    ${rs}
+  </div>`;
+}
+
+function fillTeam(teamKey, cfg, numSubs) {
+  let main = '';
+  for (let i = 1; i <= cfg.main; i++) main += makeRow(teamKey, i, false, cfg);
+  document.getElementById(`col-${teamKey}-main`).innerHTML = main;
+  const sw = document.getElementById(`col-${teamKey}-subs-wrap`);
+  if (numSubs > 0) {
+    let subs = '';
+    for (let i = 1; i <= numSubs; i++) subs += makeRow(teamKey, i, true, cfg);
+    document.getElementById(`col-${teamKey}-subs`).innerHTML = subs;
+    sw.style.display = '';
+  } else {
+    sw.style.display = 'none';
+  }
+}
+
+let _currentCfg = null;
+
+function onSportChange(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const result = detectSport(opt.dataset.name);
+  const section = document.getElementById('sport-setup-section');
+  const overs = document.getElementById('overs-wrap');
+  const badW = document.getElementById('badminton-type-wrap');
+
+  if (!result || !opt.value) {
+    section.style.display = 'none';
+    overs.style.display = 'none';
+    if (badW) badW.style.display = 'none';
+    return;
+  }
+  const { key, cfg } = result;
+  _currentCfg = cfg;
+  section.style.display = '';
+  overs.style.display = cfg.showOvers ? '' : 'none';
+  if (badW) badW.style.display = cfg.showBadmintonType ? '' : 'none';
+  document.getElementById('sport-setup-title').textContent = cfg.label;
+  document.getElementById('sport-hint-text').textContent = cfg.hint;
+  syncTeamHeadings();
+  fillTeam('team1', cfg, cfg.subs);
+  fillTeam('team2', cfg, cfg.subs);
+}
+
+function syncTeamHeadings() {
+  const t1 = document.getElementById('inp-team1').value.trim() || 'Team 1';
+  const t2 = document.getElementById('inp-team2').value.trim() || 'Team 2';
+  document.getElementById('col-team1-head').textContent = t1;
+  document.getElementById('col-team2-head').textContent = t2;
+}
+
+// ── Auto-fill players from previous matches ──────────────────────────
+let _t1Timer = null, _t2Timer = null;
+
+function onTeamInput(teamKey) {
+  const timer = teamKey === 'team1' ? _t1Timer : _t2Timer;
+  if (timer) clearTimeout(timer);
+  const newTimer = setTimeout(() => tryAutoFillTeam(teamKey), 600);
+  if (teamKey === 'team1') _t1Timer = newTimer; else _t2Timer = newTimer;
+}
+
+async function tryAutoFillTeam(teamKey) {
+  const inp = document.getElementById(`inp-${teamKey}`);
+  const teamName = inp ? inp.value.trim() : '';
+  if (!teamName || teamName.length < 2) return;
+
+  const sportSel = document.getElementById('sport-select');
+  const sportId = sportSel ? sportSel.value : '';
+
+  let url = `/api/team/players?team=${encodeURIComponent(teamName)}`;
+  if (sportId) url += `&sport_id=${sportId}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.players || data.players.length === 0) return;
+    if (!_currentCfg) return;
+
+    // Show toast-style banner
+    showAutoFillBanner(teamKey, teamName, data.players.length + data.subs.length);
+
+    // Fill main players
+    data.players.forEach((p, i) => {
+      const idx = i + 1;
+      const nameEl = document.querySelector(`[name="${teamKey}_p${idx}_name"]`);
+      const roleEl = document.querySelector(`[name="${teamKey}_p${idx}_role"]`);
+      if (nameEl) nameEl.value = p.player_name || '';
+      if (roleEl && p.role) roleEl.value = p.role;
+    });
+    // Fill subs
+    data.subs.forEach((p, i) => {
+      const idx = i + 1;
+      const nameEl = document.querySelector(`[name="${teamKey}_sub${idx}_name"]`);
+      const roleEl = document.querySelector(`[name="${teamKey}_sub${idx}_role"]`);
+      if (nameEl) nameEl.value = p.player_name || '';
+      if (roleEl && p.role) roleEl.value = p.role;
+    });
+  } catch (e) { /* silently ignore */ }
+}
+
+function showAutoFillBanner(teamKey, teamName, count) {
+  const col = document.getElementById(`col-${teamKey}-main`);
+  if (!col) return;
+  // Remove any existing banner
+  const old = document.getElementById(`autofill-banner-${teamKey}`);
+  if (old) old.remove();
+  const banner = document.createElement('div');
+  banner.id = `autofill-banner-${teamKey}`;
+  banner.style.cssText = 'background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:6px 10px;font-size:11px;color:#34d399;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;';
+  banner.innerHTML = `<span>✓</span><span>Auto-filled ${count} players from last match</span><button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;color:#34d399;cursor:pointer;font-size:14px;line-height:1;">×</button>`;
+  col.parentElement.insertBefore(banner, col);
+  setTimeout(() => { if (banner.parentElement) banner.remove(); }, 5000);
+}
+
+// Attach debounced listeners to team inputs
+document.addEventListener('DOMContentLoaded', () => {
+  const t1 = document.getElementById('inp-team1');
+  const t2 = document.getElementById('inp-team2');
+  if (t1) t1.addEventListener('blur', () => { syncTeamHeadings(); onTeamInput('team1'); });
+  if (t2) t2.addEventListener('blur', () => { syncTeamHeadings(); onTeamInput('team2'); });
+});
+
+function openAddModal() { document.getElementById('add-modal').style.display = 'flex'; }
+function closeAddModal() { document.getElementById('add-modal').style.display = 'none'; }
+document.getElementById('add-modal').addEventListener('click', function(e) { if (e.target===this) closeAddModal(); });
+</script>
+{% endblock %}

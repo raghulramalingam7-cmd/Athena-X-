@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🏏 Gully Cricket Score Board</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/scoreboard.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏏</text></svg>"/>
+  <script>(function(){var t=localStorage.getItem('athena-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+  <!-- Site nav bar -->
+  <nav class="navbar">
+    <a href="/" class="nav-brand"><div class="nav-brand-icon">🏏</div>Athena-X</a>
+    <div class="nav-actions">
+      <a href="/" class="nav-link">← Events</a>
+      <a href="/admin" class="nav-link" style="color:var(--accent2)">Admin ↗</a>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme"><span id="theme-icon">🌙</span></button>
+    </div>
+  </nav>
+  <script>
+  (function(){
+    var html=document.documentElement,btn=document.getElementById('theme-toggle'),icon=document.getElementById('theme-icon');
+    function apply(t){html.setAttribute('data-theme',t);if(icon)icon.textContent=t==='dark'?'🌙':'☀️';localStorage.setItem('athena-theme',t);}
+    apply(localStorage.getItem('athena-theme')||'dark');
+    if(btn)btn.addEventListener('click',function(){apply(html.getAttribute('data-theme')==='dark'?'light':'dark');});
+  })();
+  </script>
+  <!-- preload match_id if coming from an event link -->
+  <script>window._preloadMatchId = {{ match_id | tojson }};</script>
+  <div id="app">
+
+    <!-- ═══════════════════════════ SETUP SCREEN ═══════════════════════════ -->
+    <div id="screen-setup" class="screen active">
+      <div class="header">
+        <div class="header-icon">🏏</div>
+        <h1>Gully Cricket</h1>
+        <p>Score Board</p>
+      </div>
+
+      <div class="card">
+        <h2>🏆 Match Setup</h2>
+
+        <div class="form-group">
+          <label>Team 1 Name</label>
+          <input type="text" id="team1-name" placeholder="e.g. Mumbai Heroes" />
+        </div>
+
+        <div class="form-group">
+          <label>Team 2 Name</label>
+          <input type="text" id="team2-name" placeholder="e.g. Delhi Kings" />
+        </div>
+
+        <div class="form-group">
+          <label>Number of Overs</label>
+          <div class="overs-grid">
+            <button class="over-btn" data-overs="2">2</button>
+            <button class="over-btn" data-overs="3">3</button>
+            <button class="over-btn" data-overs="5">5</button>
+            <button class="over-btn active" data-overs="6">6</button>
+            <button class="over-btn" data-overs="8">8</button>
+            <button class="over-btn" data-overs="10">10</button>
+            <button class="over-btn" data-overs="15">15</button>
+            <button class="over-btn" data-overs="20">20</button>
+          </div>
+          <input type="hidden" id="total-overs" value="6" />
+        </div>
+
+        <div class="form-group">
+          <label>Team 1 Players <span class="hint">(one per line)</span></label>
+          <textarea id="team1-players" rows="5" placeholder="Player 1&#10;Player 2&#10;Player 3&#10;..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Team 2 Players <span class="hint">(one per line)</span></label>
+          <textarea id="team2-players" rows="5" placeholder="Player 1&#10;Player 2&#10;Player 3&#10;..."></textarea>
+        </div>
+
+        <button class="btn-primary btn-full" onclick="goToToss()">Proceed to Toss →</button>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ TOSS SCREEN ═══════════════════════════ -->
+    <div id="screen-toss" class="screen">
+      <div class="header">
+        <div class="header-icon">🪙</div>
+        <h1>Toss</h1>
+      </div>
+
+      <div class="card">
+        <h2>Who won the toss?</h2>
+        <div id="toss-options" class="radio-group"></div>
+
+        <div id="bat-choice-section" style="display:none; margin-top:20px;">
+          <h2>Elected to?</h2>
+          <div id="bat-choice-options" class="radio-group"></div>
+        </div>
+
+        <button class="btn-primary btn-full" style="margin-top:20px;" onclick="startMatch()">Start Match 🏏</button>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ BATSMEN SCREEN ═══════════════════════════ -->
+    <div id="screen-batsmen" class="screen">
+      <div class="header small-header">
+        <h1>🏏 Select Opening Batsmen</h1>
+        <p id="batting-team-label"></p>
+      </div>
+      <div class="card">
+        <div class="form-group">
+          <label>Striker (on-strike)</label>
+          <select id="select-striker"></select>
+        </div>
+        <div class="form-group">
+          <label>Non-Striker</label>
+          <select id="select-non-striker"></select>
+        </div>
+        <div class="form-group">
+          <label>Opening Bowler</label>
+          <select id="select-bowler"></select>
+        </div>
+        <button class="btn-primary btn-full" onclick="confirmBatsmen()">Let's Play! ⚾</button>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ SCORING SCREEN ═══════════════════════════ -->
+    <div id="screen-scoring" class="screen">
+      <!-- Top score bar -->
+      <div class="score-bar">
+        <div class="score-left">
+          <div id="batting-team-name" class="team-name">Team A</div>
+          <div id="score-display" class="score-big">0/0</div>
+          <div id="overs-display" class="overs-text">Overs: 0.0 / 6</div>
+        </div>
+        <div class="score-right" id="target-box" style="display:none">
+          <div class="target-label">Target</div>
+          <div id="target-display" class="target-num">—</div>
+          <div id="rrr-display" class="rrr-text"></div>
+        </div>
+        <div class="score-right" id="crr-box">
+          <div class="target-label">CRR</div>
+          <div id="crr-display" class="target-num">0.00</div>
+        </div>
+      </div>
+
+      <!-- Current batsmen -->
+      <div class="batsmen-bar">
+        <div class="batsman-item striker">
+          <span class="bat-icon">🏏</span>
+          <span id="striker-name">—</span>
+          <span id="striker-score" class="bat-score">0(0)</span>
+        </div>
+        <div class="batsman-item">
+          <span class="bat-icon">•</span>
+          <span id="nonstriker-name">—</span>
+          <span id="nonstriker-score" class="bat-score">0(0)</span>
+        </div>
+        <div class="batsman-item bowler-item">
+          <span class="bat-icon">⚾</span>
+          <span id="bowler-name-display">—</span>
+          <span id="bowler-stats-display" class="bat-score">0-0</span>
+        </div>
+      </div>
+
+      <!-- Ball-by-ball current over -->
+      <div class="over-balls">
+        <span class="over-label">This Over:</span>
+        <span id="ball-dots"></span>
+      </div>
+
+      <!-- Run buttons -->
+      <div class="run-buttons">
+        <button class="run-btn" onclick="addRun(0)">0</button>
+        <button class="run-btn" onclick="addRun(1)">1</button>
+        <button class="run-btn" onclick="addRun(2)">2</button>
+        <button class="run-btn" onclick="addRun(3)">3</button>
+        <button class="run-btn four" onclick="addRun(4)">4</button>
+        <button class="run-btn six" onclick="addRun(6)">6</button>
+      </div>
+
+      <!-- Extra / Wicket buttons -->
+      <div class="extras-row">
+        <button class="extra-btn" onclick="showExtras()">Extras</button>
+        <button class="extra-btn wicket" onclick="showWicket()">WICKET 🔴</button>
+        <button class="extra-btn" onclick="showScoreboard()">Scorecard 📋</button>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ EXTRAS MODAL ═══════════════════════════ -->
+    <div id="modal-extras" class="modal-overlay" style="display:none">
+      <div class="modal">
+        <h2>Extras</h2>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="extra-type" value="wide" checked/> Wide</label>
+          <label class="radio-item"><input type="radio" name="extra-type" value="no_ball"/> No Ball</label>
+          <label class="radio-item"><input type="radio" name="extra-type" value="bye"/> Bye</label>
+          <label class="radio-item"><input type="radio" name="extra-type" value="leg_bye"/> Leg Bye</label>
+        </div>
+        <div class="form-group">
+          <label>Runs Scored off the Extra</label>
+          <div class="run-buttons small">
+            <button class="run-btn" onclick="setExtraRuns(0)">0</button>
+            <button class="run-btn" onclick="setExtraRuns(1)">1</button>
+            <button class="run-btn" onclick="setExtraRuns(2)">2</button>
+            <button class="run-btn" onclick="setExtraRuns(3)">3</button>
+            <button class="run-btn four" onclick="setExtraRuns(4)">4</button>
+          </div>
+          <input type="hidden" id="extra-runs-val" value="0"/>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn-secondary" onclick="closeModal('modal-extras')">Cancel</button>
+          <button class="btn-primary" onclick="confirmExtras()">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ WICKET MODAL ═══════════════════════════ -->
+    <div id="modal-wicket" class="modal-overlay" style="display:none">
+      <div class="modal">
+        <h2>🔴 Wicket!</h2>
+        <div class="form-group">
+          <label>Wicket Type</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="wicket-type" value="bowled" checked/> Bowled</label>
+            <label class="radio-item"><input type="radio" name="wicket-type" value="caught"/> Caught</label>
+            <label class="radio-item"><input type="radio" name="wicket-type" value="lbw"/> LBW</label>
+            <label class="radio-item"><input type="radio" name="wicket-type" value="run_out"/> Run Out</label>
+            <label class="radio-item"><input type="radio" name="wicket-type" value="stumped"/> Stumped</label>
+            <label class="radio-item"><input type="radio" name="wicket-type" value="hit_wicket"/> Hit Wicket</label>
+          </div>
+        </div>
+        <div class="form-group" id="fielder-group">
+          <label>Fielder (for caught/stumped)</label>
+          <input type="text" id="fielder-input" placeholder="Fielder name (optional)" />
+        </div>
+        <div class="form-group" id="run-out-group" style="display:none">
+          <label>Who got Run Out?</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="run-out-who" value="striker" checked/> Striker</label>
+            <label class="radio-item"><input type="radio" name="run-out-who" value="non_striker"/> Non-Striker</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Runs scored on this delivery</label>
+          <div class="run-buttons small">
+            <button class="run-btn active-run" onclick="setWicketRuns(0)">0</button>
+            <button class="run-btn" onclick="setWicketRuns(1)">1</button>
+            <button class="run-btn" onclick="setWicketRuns(2)">2</button>
+            <button class="run-btn" onclick="setWicketRuns(3)">3</button>
+          </div>
+          <input type="hidden" id="wicket-runs-val" value="0"/>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn-secondary" onclick="closeModal('modal-wicket')">Cancel</button>
+          <button class="btn-primary" onclick="confirmWicket()">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ NEW BATSMAN MODAL ═══════════════════════════ -->
+    <div id="modal-new-batsman" class="modal-overlay" style="display:none">
+      <div class="modal">
+        <h2>🏏 New Batsman</h2>
+        <p>Select next batsman to come in:</p>
+        <div id="new-batsman-list" class="player-list"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn-primary" onclick="confirmNewBatsman()">Send In</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ NEW BOWLER MODAL ═══════════════════════════ -->
+    <div id="modal-new-bowler" class="modal-overlay" style="display:none">
+      <div class="modal">
+        <h2>⚾ New Over - Select Bowler</h2>
+        <div id="new-bowler-list" class="player-list"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn-primary" onclick="confirmNewBowler()">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ 2ND INNINGS MODAL ═══════════════════════════ -->
+    <div id="modal-innings-break" class="modal-overlay" style="display:none">
+      <div class="modal text-center">
+        <div style="font-size:48px">🏏</div>
+        <h2>Innings Break!</h2>
+        <div id="innings-break-msg" class="result-text"></div>
+        <div id="innings-break-sub" style="margin-top:10px; color:#aaa; font-size:14px;"></div>
+        <button class="btn-primary btn-full" style="margin-top:20px" onclick="startSecondInnings()">Start 2nd Innings</button>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ MATCH RESULT SCREEN ═══════════════════════════ -->
+    <div id="screen-result" class="screen">
+      <div class="header">
+        <div class="header-icon">🏆</div>
+        <h1>Match Over!</h1>
+      </div>
+      <div class="card text-center">
+        <div class="trophy">🏆</div>
+        <div id="result-text" class="result-text"></div>
+        <button class="btn-primary btn-full" style="margin-top:30px;" onclick="showScoreboard()">View Scorecard 📋</button>
+        <button class="btn-secondary btn-full" style="margin-top:10px;" onclick="newMatch()">New Match 🏏</button>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════ SCORECARD SCREEN ═══════════════════════════ -->
+    <div id="screen-scorecard" class="screen">
+      <div class="header small-header">
+        <h1>📋 Scorecard</h1>
+        <div id="sc-match-info" style="font-size:13px;color:#aaa;margin-top:4px;"></div>
+      </div>
+      <div id="scorecard-content"></div>
+      <div style="padding:16px;display:flex;gap:10px;">
+        <button class="btn-secondary" onclick="goBack()">← Back</button>
+        <button class="btn-primary" onclick="newMatch()">New Match 🏏</button>
+      </div>
+    </div>
+
+  </div><!-- end #app -->
+
+  <script src="/static/js/scoreboard.js"></script>
+</body>
+</html>

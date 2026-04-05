@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Profile Page
+   ═══════════════════════════════════════════════════════ */
+
+.profile-page { max-width:900px; margin:0 auto; padding:32px 20px; }
+
+.profile-hero {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:32px; display:flex; align-items:center; gap:24px;
+  margin-bottom:24px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+}
+.profile-hero::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg, var(--accent), var(--accent2), var(--green));
+}
+.profile-avatar {
+  width:80px; height:80px;
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-num); font-size:32px; font-weight:900; color:#fff;
+  flex-shrink:0; box-shadow:0 4px 16px rgba(0,200,150,0.4);
+}
+.profile-info h1     { font-family:var(--font-num); font-size:26px; font-weight:800; color:var(--text); letter-spacing:-0.3px; margin-bottom:4px; }
+.profile-info .profile-sub   { color:var(--muted2); font-size:14px; }
+.profile-info .joined-date   { color:var(--muted2); font-size:12px; margin-top:4px; }
+
+/* ── Stats ── */
+.profile-stats-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; margin-bottom:24px; }
+.profile-stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:18px 16px; text-align:center; box-shadow:var(--shadow); transition:var(--tr); }
+.profile-stat-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); }
+.profile-stat-num  { font-family:var(--font-num); font-size:32px; font-weight:900; color:var(--text); line-height:1; }
+.profile-stat-num.stat-blue   { color:var(--accent2); }
+.profile-stat-num.stat-green  { color:var(--green); }
+.profile-stat-num.stat-yellow { color:var(--yellow); }
+.profile-stat-num.stat-red    { color:var(--red); }
+.profile-stat-lbl  { font-size:11px; color:var(--muted2); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; }
+
+/* ── Registration list ── */
+.reg-list { display:flex; flex-direction:column; gap:12px; }
+.reg-item { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; display:block; color:var(--text); text-decoration:none; transition:var(--tr); box-shadow:var(--shadow); }
+.reg-item:hover { background:var(--card2); border-color:var(--border2); transform:translateY(-1px); box-shadow:var(--shadow-lg); text-decoration:none; color:var(--text); }
+.reg-item-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.reg-sport-icon  { font-size:28px; line-height:1; }
+.reg-event-name  { font-family:var(--font-num); font-size:16px; font-weight:700; color:var(--text); margin-bottom:2px; }
+.reg-teams       { font-size:14px; color:var(--text2); font-weight:500; }
+.reg-meta        { font-size:12px; color:var(--muted2); margin-top:8px; display:flex; gap:12px; flex-wrap:wrap; }
+.reg-tags        { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+.tag { background:var(--bg3); border:1px solid var(--border2); color:var(--text2); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:500; }
+
+/* ── Status badges ── */
+.status-badge     { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:0.3px; text-transform:capitalize; }
+.status-upcoming  { background:rgba(0,200,150,.1); color:var(--accent2); border:1px solid rgba(0,200,150,.2); }
+.status-completed { background:var(--bg3); color:var(--muted); border:1px solid var(--border2); }
+.status-confirmed { background:rgba(52,168,83,.1); color:var(--green); border:1px solid rgba(52,168,83,.2); }
+
+@media (max-width:768px) { .profile-hero { flex-direction:column; text-align:center; } }
+@media (max-width:640px) { .profile-stats-row { grid-template-columns:repeat(2,1fr); } }

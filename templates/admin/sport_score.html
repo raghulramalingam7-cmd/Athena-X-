@@ -1,0 +1,217 @@
+{% extends "admin/base.html" %}
+{% block title %}Score Entry — {{ event.title }}{% endblock %}
+{% block page_title %}{{ event.sport_icon }} Score Entry{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/events/{{ event.id }}" class="btn btn-secondary btn-sm">← Back to Event</a>
+{% endblock %}
+{% block content %}
+
+<div style="max-width:700px;">
+  <!-- Event Info -->
+  <div class="info-grid" style="margin-bottom:24px;">
+    <div class="info-card">
+      <div class="info-card-label">Sport</div>
+      <div class="info-card-value">{{ event.sport_icon }} {{ event.sport_name }}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Team 1</div>
+      <div class="info-card-value">{{ event.team1 }}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Team 2</div>
+      <div class="info-card-value">{{ event.team2 }}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Status</div>
+      <div class="info-card-value"><span class="status-badge status-{{ event.status }}">{{ event.status.title() }}</span></div>
+    </div>
+  </div>
+
+  <!-- Current Score Display -->
+  <div class="sport-scorecard" style="margin-bottom:28px;" id="score-display">
+    <div class="ssc-header">📊 Current Score</div>
+    <div class="ssc-body">
+      <div class="ssc-main-score">
+        <div class="ssc-team-score">
+          <div class="ssc-team-label">{{ event.team1 }}</div>
+          <div class="ssc-score-big" id="disp-t1">{{ score.team1_score }}</div>
+        </div>
+        <div class="ssc-separator">–</div>
+        <div class="ssc-team-score">
+          <div class="ssc-team-label">{{ event.team2 }}</div>
+          <div class="ssc-score-big" id="disp-t2">{{ score.team2_score }}</div>
+        </div>
+      </div>
+      {% if score.period_data %}
+      <div class="ssc-periods" id="period-display">
+        <div class="ssc-periods-title">Period Breakdown</div>
+        {% for period in score.period_data %}
+        <div class="ssc-period-row">
+          <div class="ssc-period-cell"><div class="ssc-period-lbl">Period</div><div class="ssc-period-val">{{ period.label }}</div></div>
+          <div class="ssc-period-cell"><div class="ssc-period-lbl">{{ event.team1 }}</div><div class="ssc-period-val t1">{{ period.team1 }}</div></div>
+          <div class="ssc-period-cell"><div class="ssc-period-lbl">{{ event.team2 }}</div><div class="ssc-period-val t2">{{ period.team2 }}</div></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Score Entry Form -->
+  <div class="form-card">
+    <h3>✏️ Update Score</h3>
+
+    <!-- Sport-specific templates -->
+    {% set sport_name = event.sport_name|lower %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+      {% if 'football' in sport_name or 'soccer' in sport_name %}
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('football')">⚽ Football Template</button>
+      {% elif 'basketball' in sport_name %}
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('basketball')">🏀 Basketball Template</button>
+      {% elif 'volleyball' in sport_name %}
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('volleyball')">🏐 Volleyball Template</button>
+      {% elif 'badminton' in sport_name %}
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('badminton')">🏸 Badminton Template</button>
+      {% elif 'kabaddi' in sport_name %}
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('kabaddi')">🤼 Kabaddi Template</button>
+      {% endif %}
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addPeriod()">+ Add Period</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="clearPeriods()">✕ Clear Periods</button>
+    </div>
+
+    <div class="form-row" style="margin-bottom:20px;">
+      <div class="form-group">
+        <label>{{ event.team1 }} Score</label>
+        <input type="number" id="t1-score" value="{{ score.team1_score }}" min="0" style="font-size:28px;font-weight:900;text-align:center;"/>
+      </div>
+      <div class="form-group">
+        <label>{{ event.team2 }} Score</label>
+        <input type="number" id="t2-score" value="{{ score.team2_score }}" min="0" style="font-size:28px;font-weight:900;text-align:center;"/>
+      </div>
+    </div>
+
+    <!-- Period breakdown -->
+    <div id="periods-container" style="margin-bottom:20px;"></div>
+
+    <div class="form-row" style="margin-top:8px;">
+      <button class="btn btn-primary" onclick="saveScore(false)">💾 Update Score</button>
+      <button class="btn btn-green" onclick="saveScore(true)" style="background:var(--green);">🏆 Finalize & Complete Match</button>
+    </div>
+    <div id="save-msg" style="margin-top:10px;font-size:14px;display:none;"></div>
+  </div>
+
+  <!-- Share link -->
+  <div class="share-box" style="margin-top:20px;">
+    <span style="color:var(--muted2);">📺 Public scorecard URL:</span>
+    <span class="share-url">/event/{{ event.id }}</span>
+    <button class="btn btn-secondary btn-xs" onclick="copyUrl()">Copy</button>
+  </div>
+</div>
+
+<script>
+const team1 = {{ event.team1 | tojson }};
+const team2 = {{ event.team2 | tojson }};
+let periods = {{ score.period_data | tojson }};
+
+function renderPeriods() {
+  const container = document.getElementById('periods-container');
+  if (!periods.length) { container.innerHTML=''; return; }
+  let html = '<div style="font-size:11px;color:#93c5fd;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;margin-bottom:10px;">Period Breakdown</div>';
+  periods.forEach((p, i) => {
+    html += `<div style="display:grid;grid-template-columns:140px 1fr 1fr 32px;gap:10px;align-items:center;margin-bottom:10px;">
+      <input type="text" value="${p.label}" onchange="periods[${i}].label=this.value" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;outline:none;" placeholder="Label"/>
+      <div>
+        <div style="font-size:10px;color:#93c5fd;text-transform:uppercase;font-weight:700;margin-bottom:4px;">${team1}</div>
+        <input type="number" value="${p.team1}" min="0" onchange="periods[${i}].team1=+this.value;syncTotals()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--accent2);padding:8px 10px;font-size:15px;font-weight:800;text-align:center;outline:none;width:100%;"/>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#93c5fd;text-transform:uppercase;font-weight:700;margin-bottom:4px;">${team2}</div>
+        <input type="number" value="${p.team2}" min="0" onchange="periods[${i}].team2=+this.value;syncTotals()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--orange);padding:8px 10px;font-size:15px;font-weight:800;text-align:center;outline:none;width:100%;"/>
+      </div>
+      <button onclick="removePeriod(${i})" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:5px;color:var(--red);padding:6px;font-size:14px;cursor:pointer;">✕</button>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function syncTotals() {
+  if (!periods.length) return;
+  document.getElementById('t1-score').value = periods.reduce((s,p) => s + (p.team1||0), 0);
+  document.getElementById('t2-score').value = periods.reduce((s,p) => s + (p.team2||0), 0);
+  document.getElementById('disp-t1').textContent = document.getElementById('t1-score').value;
+  document.getElementById('disp-t2').textContent = document.getElementById('t2-score').value;
+}
+
+function addPeriod() {
+  periods.push({ label: 'Period ' + (periods.length+1), team1: 0, team2: 0 });
+  renderPeriods();
+}
+
+function removePeriod(i) {
+  periods.splice(i, 1);
+  renderPeriods();
+  syncTotals();
+}
+
+function clearPeriods() {
+  periods = [];
+  renderPeriods();
+}
+
+function loadTemplate(sport) {
+  periods = [];
+  const templates = {
+    football: ['1st Half','2nd Half','Extra Time'],
+    basketball: ['Q1','Q2','Q3','Q4','OT'],
+    volleyball: ['Set 1','Set 2','Set 3','Set 4','Set 5'],
+    badminton: ['Game 1','Game 2','Game 3'],
+    kabaddi: ['1st Half','2nd Half'],
+  };
+  const labels = templates[sport] || ['Period 1'];
+  periods = labels.map(l => ({ label: l, team1: 0, team2: 0 }));
+  renderPeriods();
+}
+
+async function saveScore(finalize) {
+  const t1 = +document.getElementById('t1-score').value;
+  const t2 = +document.getElementById('t2-score').value;
+  const msg = document.getElementById('save-msg');
+  try {
+    const res = await fetch('/api/event/{{ event.id }}/score', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ team1_score: t1, team2_score: t2, period_data: periods, finalize })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('disp-t1').textContent = t1;
+      document.getElementById('disp-t2').textContent = t2;
+      msg.style.display = 'block';
+      msg.style.color = 'var(--green)';
+      msg.textContent = finalize ? '✅ Match finalized and completed!' : '✅ Score updated!';
+      setTimeout(() => { msg.style.display='none'; }, 3000);
+      if (finalize) setTimeout(() => location.reload(), 1500);
+    }
+  } catch(e) {
+    msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='❌ Error saving score.';
+  }
+}
+
+function copyUrl() {
+  navigator.clipboard.writeText(window.location.origin + '/event/{{ event.id }}');
+  event.target.textContent = 'Copied!';
+  setTimeout(() => { event.target.textContent='Copy'; }, 2000);
+}
+
+// Live score update display
+document.getElementById('t1-score').addEventListener('input', function() {
+  document.getElementById('disp-t1').textContent = this.value;
+});
+document.getElementById('t2-score').addEventListener('input', function() {
+  document.getElementById('disp-t2').textContent = this.value;
+});
+
+// Initial render
+renderPeriods();
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Chess Scoring Page
+   ═══════════════════════════════════════════════════════ */
+
+.chess-setup       { background:var(--card); border-radius:12px; padding:24px; max-width:520px; margin:0 auto; }
+.chess-board-grid  { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+
+.chess-scoreboard {
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:0;
+  background:var(--card); border-radius:14px; overflow:hidden; margin-bottom:24px;
+}
+.chess-team    { padding:20px; text-align:center; }
+.chess-team.t1 { background:linear-gradient(135deg, rgba(0,200,150,.15), transparent); }
+.chess-team.t2 { background:linear-gradient(135deg, transparent, rgba(168,85,247,.15)); }
+.chess-team-name { font-size:16px; font-weight:700; color:var(--text); }
+.chess-score     { font-size:48px; font-weight:900; color:var(--accent); }
+.chess-vs        { font-size:13px; font-weight:700; color:var(--muted); padding:16px; text-align:center; }
+
+.game-list { display:flex; flex-direction:column; gap:12px; }
+.game-item { background:var(--card); border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px; }
+.game-no   { width:36px; height:36px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--muted); flex-shrink:0; }
+.game-no.active { background:var(--accent); color:#fff; }
+
+.game-color-badge { display:flex; gap:6px; align-items:center; font-size:12px; }
+.white-badge { padding:3px 8px; border-radius:4px; font-weight:600; background:#fff; color:#000; }
+.black-badge { padding:3px 8px; border-radius:4px; font-weight:600; background:#1e1e2e; color:#fff; border:1px solid #444; }
+
+.game-result-badge  { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.res-pending { background:rgba(148,163,184,.1); color:var(--muted); }
+.res-white   { background:rgba(255,255,255,.15); color:#fff; }
+.res-black   { background:rgba(30,30,46,.8); color:#e2e8f0; border:1px solid #444; }
+.res-draw    { background:rgba(245,158,11,.1); color:#fbbf24; }
+
+.result-form { display:flex; gap:8px; flex-wrap:wrap; }
+.result-btn  { padding:7px 14px; border-radius:6px; border:1px solid var(--border); background:var(--bg3); color:var(--text); cursor:pointer; font-size:13px; font-weight:600; transition:.15s; }
+.result-btn:hover      { opacity:.85; }
+.result-btn.white-win  { background:#fff; color:#000; border-color:#fff; }
+.result-btn.black-win  { background:#1e1e2e; color:#fff; border-color:#666; }
+.result-btn.draw-btn   { background:rgba(245,158,11,.2); color:#fbbf24; border-color:#fbbf24; }
+
+.game-detail-modal      { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:999; align-items:center; justify-content:center; }
+.game-detail-modal.open { display:flex; }
+.modal-box    { background:var(--card); border-radius:14px; padding:28px; width:100%; max-width:420px; }
+.modal-box h3 { margin:0 0 18px; font-size:18px; }
+.modal-row    { margin-bottom:12px; }
+.modal-row label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+.modal-row input,
+.modal-row select,
+.modal-row textarea {
+  width:100%; box-sizing:border-box; padding:8px 12px;
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:6px; color:var(--text); font-size:13px;
+}
+.modal-btns         { display:flex; gap:8px; margin-top:16px; }
+.modal-btns button  { flex:1; padding:10px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+.btn-confirm { background:var(--accent); color:#fff; }
+.btn-cancel  { background:var(--bg3); color:var(--muted); }
+
+.match-over-banner    { background:linear-gradient(135deg,var(--accent),#8b5cf6); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px; }
+.match-over-banner h2 { color:#fff; margin:0 0 6px; font-size:22px; }
+.match-over-banner p  { color:rgba(255,255,255,.8); margin:0; }
+
+.opening-suggestions { font-size:11px; color:var(--muted); margin-top:4px; }

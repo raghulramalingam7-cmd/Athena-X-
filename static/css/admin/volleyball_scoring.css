@@ -1,0 +1,36 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Volleyball Scoring Page
+   ═══════════════════════════════════════════════════════ */
+
+/* Volleyball scoring uses the same squad-setup and scoreboard classes
+   as shared in style.css. Any volleyball-specific overrides go here. */
+
+/* ── Point buttons ── */
+.vb-point-btn {
+  width: 100%; padding: 20px 10px; font-size: 22px; font-weight: 900;
+  border: none; border-radius: 12px; cursor: pointer; transition: all 0.1s;
+}
+.vb-point-btn.t1 { background: rgba(0,200,150,0.12); border: 2px solid rgba(0,200,150,0.35); color: var(--accent); }
+.vb-point-btn.t1:hover { background: rgba(0,200,150,0.22); transform: translateY(-1px); }
+.vb-point-btn.t2 { background: rgba(249,115,22,0.12);  border: 2px solid rgba(249,115,22,0.35);  color: #f97316; }
+.vb-point-btn.t2:hover { background: rgba(249,115,22,0.22); transform: translateY(-1px); }
+
+/* ── Set pills ── */
+.set-pill { padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 800; }
+.set-pill.won { background: rgba(16,185,129,0.15); color: #10b981; }
+.set-pill.lost { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+/* ── Player section ── */
+.ss-info-banner { background:rgba(74,158,255,.05); border:1px solid rgba(74,158,255,.18); border-radius:9px; padding:11px 16px; margin-bottom:18px; font-size:13px; color:var(--accent2); }
+.ss-tabs  { display:flex; gap:0; border-radius:9px; overflow:hidden; border:1px solid var(--border); margin-bottom:18px; }
+.ss-tab   { flex:1; padding:10px 8px; font-size:14px; font-weight:700; border:none; cursor:pointer; background:var(--bg3); color:var(--muted); transition:var(--tr); }
+.ss-tab.active { background:var(--tab-color,#1a73e8); color:#fff; }
+.ss-badge { font-size:11px; border-radius:8px; padding:1px 6px; margin-left:5px; background:rgba(255,255,255,.15); }
+.ss-row   { display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+.ss-num   { min-width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:11px; font-weight:800; flex-shrink:0; }
+.ss-num-main { color:var(--accent2); background:rgba(74,158,255,.1); }
+.ss-num-sub  { color:var(--yellow);  background:rgba(251,188,4,.1); }
+.ss-inp  { flex:1; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); background:var(--input-bg); color:var(--text); font-size:13px; outline:none; transition:var(--tr); min-width:0; }
+.ss-inp:focus { border-color:var(--accent); }
+.ss-pos-sel { padding:9px 8px; border-radius:8px; border:1.5px solid var(--border); background:var(--input-bg); color:var(--text); font-size:12px; outline:none; width:135px; flex-shrink:0; cursor:pointer; }
+.ss-pos-sel:focus { border-color:var(--accent); }

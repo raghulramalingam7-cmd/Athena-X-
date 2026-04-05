@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Overall Points Tables — Athena-X{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/leaderboard.css"/>
+<style>
+/* ── Points Overview ── */
+.points-hero {
+  background: linear-gradient(135deg, var(--card) 0%, var(--bg3) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.points-hero-icon { font-size: 52px; line-height: 1; flex-shrink: 0; }
+.points-hero h1  { font-family: var(--font-num); font-size: 28px; font-weight: 900; letter-spacing: -0.5px; margin: 0 0 6px; }
+.points-hero p   { color: var(--muted2); font-size: 14px; margin: 0; }
+
+.sports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.sport-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: var(--tr);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.sport-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  transform: translateY(-2px);
+}
+.sport-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg3) 0%, var(--card) 100%);
+}
+.sport-card-icon  { font-size: 32px; line-height: 1; }
+.sport-card-name  { font-size: 17px; font-weight: 800; }
+.sport-card-meta  { color: var(--muted2); font-size: 12px; margin-top: 2px; }
+
+.mini-table-wrap  { padding: 0; }
+.mini-table       { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mini-table th    { background: var(--bg3); color: var(--muted); font-size: 10px;
+                    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+                    padding: 8px 14px; text-align: left; }
+.mini-table td    { padding: 9px 14px; border-top: 1px solid var(--border); vertical-align: middle; }
+.mini-table tr:hover td { background: var(--bg3); }
+.mini-rank        { width: 26px; font-weight: 900; color: var(--muted2); font-family: var(--font-num); }
+.mini-rank.gold   { color: var(--yellow); }
+.mini-rank.silver { color: #b0b8c8; }
+.mini-rank.bronze { color: #c17d3c; }
+.mini-team        { font-weight: 600; }
+.mini-pts         { font-family: var(--font-num); font-weight: 900; color: var(--accent2);
+                    font-size: 15px; text-align: right; }
+
+.sport-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+  font-size: 12px;
+  color: var(--muted2);
+}
+.sport-card-footer .view-link {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  text-decoration: none;
+}
+.sport-card-footer .view-link:hover { text-decoration: underline; }
+
+.empty-sport { padding: 20px; text-align: center; color: var(--muted2); font-size: 13px; }
+.empty-sport span { font-size: 24px; display: block; margin-bottom: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="points-hero">
+    <div class="points-hero-icon">🏆</div>
+    <div>
+      <a href="/" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:6px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← Home</a>
+      <h1>Overall Points Tables</h1>
+      <p>Season standings &amp; team rankings across all {{ sports|length }} active sports</p>
+    </div>
+  </div>
+
+  <div class="sports-grid">
+    {% for sport in sports %}
+    {% set table = previews.get(sport.id, []) %}
+    <a href="/points/{{ sport.id }}" class="sport-card">
+      <div class="sport-card-header">
+        <div class="sport-card-icon">{{ sport.icon }}</div>
+        <div>
+          <div class="sport-card-name">{{ sport.name }}</div>
+          <div class="sport-card-meta">{{ sport.completed_events }} completed match{{ 'es' if sport.completed_events != 1 }}</div>
+        </div>
+      </div>
+
+      {% if table %}
+      <div class="mini-table-wrap">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th style="width:28px;">#</th>
+              <th>Team / Player</th>
+              <th style="text-align:right;">MP</th>
+              <th style="text-align:right;">W</th>
+              <th style="text-align:right;">L</th>
+              <th style="text-align:right;">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table[:5] %}
+            <tr>
+              <td>
+                <span class="mini-rank {% if loop.index==1 %}gold{% elif loop.index==2 %}silver{% elif loop.index==3 %}bronze{% endif %}">
+                  {% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}{% endif %}
+                </span>
+              </td>
+              <td class="mini-team">
+                {% if row.team|length > 20 %}{{ row.team[:18] }}…{% else %}{{ row.team }}{% endif %}
+              </td>
+              <td style="text-align:right; color:var(--muted2);">{{ row.mp }}</td>
+              <td style="text-align:right; color:var(--green); font-weight:700;">{{ row.w }}</td>
+              <td style="text-align:right; color:var(--red); font-weight:700;">{{ row.l }}</td>
+              <td class="mini-pts">{{ row.pts }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-sport">
+        <span>{{ sport.icon }}</span>
+        No completed matches yet
+      </div>
+      {% endif %}
+
+      <div class="sport-card-footer">
+        <span>Points: Win=3 · Draw=1 · Loss=0</span>
+        <span class="view-link">Full table →</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

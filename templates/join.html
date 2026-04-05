@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{{ settings.gform_title }} — {{ settings.org_name }}{% endblock %}
+
+{% block content %}
+<style>
+.join-wrap{max-width:500px;margin:0 auto;padding:28px 16px 56px;}
+
+/* Hero */
+.join-hero{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:20px;padding:32px 24px;text-align:center;margin-bottom:20px;position:relative;overflow:hidden;}
+.join-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(197,110,248,.15),transparent 70%);pointer-events:none;}
+.join-hero::after{content:'';position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(56,189,248,.1),transparent 70%);pointer-events:none;}
+.join-org{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;}
+.join-title{font-size:26px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.2;}
+.join-desc{font-size:14px;color:var(--muted2);line-height:1.6;}
+
+/* QR card */
+.qr-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 24px;text-align:center;margin-bottom:20px;}
+.qr-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;}
+.qr-frame{display:inline-block;background:#fff;border-radius:14px;padding:12px;box-shadow:0 8px 32px rgba(0,0,0,.3);margin-bottom:16px;}
+.qr-frame img{display:block;border-radius:6px;}
+.qr-hint{font-size:13px;color:var(--muted2);line-height:1.6;margin-bottom:20px;}
+.qr-open-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#c56ef8,var(--accent));color:#fff;font-size:15px;font-weight:800;padding:14px 28px;border-radius:12px;text-decoration:none;box-shadow:0 4px 20px rgba(197,110,248,.35);transition:transform .15s,box-shadow .15s;}
+.qr-open-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(197,110,248,.45);color:#fff;text-decoration:none;}
+
+/* Auth box — viewer login/register */
+.auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 24px;margin-bottom:20px;text-align:center;}
+.auth-box-icon{font-size:48px;margin-bottom:14px;}
+.auth-box-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:8px;}
+.auth-box-desc{font-size:14px;color:var(--muted2);line-height:1.6;margin-bottom:22px;}
+.auth-btn-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;font-size:15px;font-weight:800;padding:13px 28px;border-radius:11px;text-decoration:none;box-shadow:0 4px 18px rgba(56,189,248,.25);transition:all .15s;width:100%;justify-content:center;margin-bottom:10px;}
+.auth-btn-primary:hover{opacity:.9;transform:translateY(-1px);color:#fff;text-decoration:none;}
+.auth-btn-secondary{display:inline-flex;align-items:center;gap:8px;background:var(--bg3);color:var(--text2);font-size:14px;font-weight:700;padding:12px 28px;border-radius:11px;text-decoration:none;border:1px solid var(--border);width:100%;justify-content:center;transition:all .15s;}
+.auth-btn-secondary:hover{border-color:var(--accent);color:var(--accent2);text-decoration:none;}
+.auth-divider{display:flex;align-items:center;gap:10px;color:var(--muted2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin:10px 0;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Logged-in box */
+.loggedin-box{background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(56,189,248,.06));border:1px solid rgba(16,185,129,.25);border-radius:14px;padding:20px 22px;display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+.loggedin-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0284c7,#38bdf8);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0;text-transform:uppercase;}
+.loggedin-text{flex:1;}
+.loggedin-name{font-size:15px;font-weight:700;color:var(--text);}
+.loggedin-sub{font-size:12px;color:var(--muted2);margin-top:2px;}
+.loggedin-btn{font-size:13px;font-weight:700;color:#38bdf8;text-decoration:none;padding:6px 12px;background:rgba(56,189,248,.1);border-radius:8px;border:1px solid rgba(56,189,248,.25);white-space:nowrap;}
+.loggedin-btn:hover{background:rgba(56,189,248,.18);text-decoration:none;color:#38bdf8;}
+
+/* Steps */
+.steps-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:20px;}
+.steps-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+.step-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+.step-row:last-child{margin-bottom:0;}
+.step-num{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#c56ef8,var(--accent));color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.step-text{font-size:13px;color:var(--text2);line-height:1.5;}
+.step-text strong{color:var(--text);}
+
+/* Share */
+.share-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:20px;}
+.share-url-box{flex:1;font-size:12px;color:var(--muted2);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.share-copy-btn{padding:7px 14px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;}
+.share-copy-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+.back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 14px;margin-bottom:20px;transition:.15s;}
+.back-link:hover{color:var(--text);text-decoration:none;}
+</style>
+
+<div class="join-wrap">
+
+  <a href="/" class="back-link">← {{ settings.org_name }}</a>
+
+  <!-- Hero -->
+  <div class="join-hero">
+    <div class="join-org">{{ settings.org_name }}</div>
+    <div class="join-title">{{ settings.gform_title }}</div>
+    {% if settings.gform_desc %}
+    <div class="join-desc">{{ settings.gform_desc }}</div>
+    {% endif %}
+  </div>
+
+  {% if settings.gform_url %}
+
+  <!-- External Google Form / QR -->
+  <div class="qr-card">
+    <div class="qr-label">📱 Scan to Register</div>
+    <div class="qr-frame">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ settings.gform_url | urlencode }}&bgcolor=ffffff&color=1a1a2e&qzone=2"
+           alt="Registration QR Code" width="220" height="220">
+    </div>
+    <div class="qr-hint">Point your phone camera at the QR code, or tap the button below to open the registration form directly.</div>
+    <a href="{{ settings.gform_url }}" target="_blank" class="qr-open-btn">
+      Open Registration Form →
+    </a>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps-card">
+    <div class="steps-title">How to Register</div>
+    <div class="step-row">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>Scan the QR code</strong> with your phone camera, or tap the button above.</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>Fill in your details</strong> — name, contact, sport preference, and team.</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>Submit the form.</strong> The organiser will confirm your spot before the event.</div>
+    </div>
+  </div>
+
+  <!-- Share -->
+  <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">🔗 Share this page</div>
+  <div class="share-row">
+    <span class="share-url-box">{{ request.url }}</span>
+    <button class="share-copy-btn" onclick="navigator.clipboard.writeText(window.location.href);this.textContent='✓ Copied!'">📋 Copy Link</button>
+  </div>
+
+  {% else %}
+
+  {# ── No external form — show Athena-X account auth ── #}
+  {% if user %}
+    {# Already logged in as viewer #}
+    <div class="loggedin-box">
+      <div class="loggedin-avatar">{{ user.username[0] }}</div>
+      <div class="loggedin-text">
+        <div class="loggedin-name">{{ user.full_name or user.username }}</div>
+        <div class="loggedin-sub">Signed in as @{{ user.username }} · Ready to register for events</div>
+      </div>
+      <a href="/matches" class="loggedin-btn">Browse Events →</a>
+    </div>
+
+    <div class="steps-card">
+      <div class="steps-title">How to Register for an Event</div>
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Browse Events</strong> — Go to the Matches page to see upcoming events.</div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Open an Event</strong> — Tap any upcoming event to view details.</div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Tap Register</strong> — Hit the Register button on the event page.</div>
+      </div>
+    </div>
+
+  {% else %}
+    {# Not logged in — show viewer sign-in / create account (NO admin links) #}
+    <div class="auth-box">
+      <div class="auth-box-icon">🏟️</div>
+      <div class="auth-box-title">Register via Athena-X Account</div>
+      <div class="auth-box-desc">
+        Create a free <strong>viewer account</strong> to register for events directly on this platform and follow live scores.
+      </div>
+      <a href="/register" class="auth-btn-primary">
+        🎉 Create Free Viewer Account
+      </a>
+      <div class="auth-divider">already have an account?</div>
+      <a href="/login" class="auth-btn-secondary">
+        👤 Sign In to Your Account
+      </a>
+    </div>
+
+    <!-- Steps for new users -->
+    <div class="steps-card">
+      <div class="steps-title">How it works</div>
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Create a free account</strong> — it only takes a minute.</div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Browse upcoming events</strong> on the Matches page.</div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Register for any event</strong> and follow it live with real-time scores.</div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% endif %}
+
+</div>
+{% endblock %}

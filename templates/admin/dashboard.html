@@ -1,0 +1,231 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}📊 Dashboard{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/admin/dashboard.css"/>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="/" class="btn btn-secondary btn-sm" target="_blank">← Public Site</a>
+<a href="/admin/events" class="btn btn-primary btn-sm">＋ New Event</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Welcome Banner -->
+<div class="dash-welcome">
+  <div class="welcome-grid-bg"></div>
+  <div class="dash-welcome-text">
+    <div class="greeting">
+      <span class="greeting-dot"></span> Athena-X Admin
+    </div>
+    <h2>👋 Welcome back, {{ admin_name }}!</h2>
+    <p>Here's what's happening across Athena-X today.</p>
+  </div>
+  <div class="dash-welcome-actions">
+    <a href="/admin/events" class="welcome-btn welcome-btn-ghost">📅 View Events</a>
+    <a href="/admin/events" class="welcome-btn welcome-btn-accent">＋ Create Event</a>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid-v2">
+  <div class="stat-card-v2 c-total">
+    <span class="sv2-icon">📅</span>
+    <div class="sv2-val">{{ stats.events }}</div>
+    <div class="sv2-label">Total Events</div>
+  </div>
+  <div class="stat-card-v2 c-live">
+    <span class="sv2-icon">🔴</span>
+    <div class="sv2-val">
+      {% if stats.live %}<span class="live-dot"></span>{% endif %}{{ stats.live }}
+    </div>
+    <div class="sv2-label">Live Now</div>
+  </div>
+  <div class="stat-card-v2 c-upcoming">
+    <span class="sv2-icon">🗓️</span>
+    <div class="sv2-val">{{ stats.upcoming }}</div>
+    <div class="sv2-label">Upcoming</div>
+  </div>
+  <div class="stat-card-v2 c-sports">
+    <span class="sv2-icon">🏆</span>
+    <div class="sv2-val">{{ stats.sports }}</div>
+    <div class="sv2-label">Sports</div>
+  </div>
+  <div class="stat-card-v2 c-users">
+    <span class="sv2-icon">👥</span>
+    <div class="sv2-val">{{ stats.users }}</div>
+    <div class="sv2-label">Registered Users</div>
+  </div>
+  <div class="stat-card-v2 c-regs">
+    <span class="sv2-icon">📋</span>
+    <div class="sv2-val">{{ stats.registrations }}</div>
+    <div class="sv2-label">Registrations</div>
+  </div>
+</div>
+
+<!-- Main 2-column grid -->
+<div class="dash-main">
+
+  <!-- LEFT: Events + Activity -->
+  <div class="dash-left">
+
+    <!-- Recent Events Table -->
+    <div class="dash-section">
+      <div class="ds-head">
+        <h3>📅 Recent Events</h3>
+        <a href="/admin/events">View All →</a>
+      </div>
+      <div class="ds-body">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Event</th><th>Sport</th><th>Date</th><th>Status</th><th>Regs</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for ev in recent_events %}
+          <tr>
+            <td>
+              <a href="/admin/events/{{ ev.id }}">{{ ev.title }}</a>
+              <div class="muted-cell" style="font-size:11px;margin-top:2px;">{{ ev.team1 }} vs {{ ev.team2 }}</div>
+            </td>
+            <td>
+              <span style="font-size:16px;">{{ ev.sport_icon or '🏆' }}</span>
+              <span class="muted-cell">{{ ev.sport_name or '—' }}</span>
+            </td>
+            <td class="muted-cell">{{ ev.event_date or '—' }}</td>
+            <td>
+              <span class="status-badge status-{{ ev.status }}">
+                {% if ev.status == 'live' %}<span class="live-dot" style="width:6px;height:6px;"></span>{% endif %}
+                {{ ev.status.title() }}
+              </span>
+            </td>
+            <td class="muted-cell" style="font-family:var(--font-mono);">{{ ev.reg_count }}</td>
+            <td>
+              {% if ev.status in ('live', 'upcoming') and ev.sport_name %}
+              <a href="{{ sport_admin_url(ev) }}" class="tbl-btn score-btn">⚡ Score</a>
+              {% endif %}
+              <a href="/admin/events/{{ ev.id }}" class="tbl-btn">✏️ Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="dash-section">
+      <div class="ds-head">
+        <h3>🔄 Recent Activity</h3>
+        <a href="/admin/events">All Events →</a>
+      </div>
+      <div class="ds-body">
+        {% for ev in recent_events[:8] %}
+          {% if ev.status == 'live' %}
+          <div class="activity-item">
+            <div class="activity-icon live">📡</div>
+            <div>
+              <div class="activity-text"><strong>{{ ev.sport_icon or '🏆' }} {{ ev.title }}</strong> is live now</div>
+              <div class="activity-time">{{ ev.team1 }} vs {{ ev.team2 }}{% if ev.event_date %} · {{ ev.event_date }}{% endif %}</div>
+            </div>
+          </div>
+          {% elif ev.status == 'completed' and ev.result %}
+          <div class="activity-item">
+            <div class="activity-icon completed">✅</div>
+            <div>
+              <div class="activity-text"><strong>{{ ev.sport_icon or '🏆' }} {{ ev.title }}</strong> completed</div>
+              <div class="activity-time">{{ ev.result }}</div>
+            </div>
+          </div>
+          {% elif ev.status == 'upcoming' %}
+          <div class="activity-item">
+            <div class="activity-icon upcoming">🗓️</div>
+            <div>
+              <div class="activity-text"><strong>{{ ev.sport_icon or '🏆' }} {{ ev.title }}</strong> scheduled</div>
+              <div class="activity-time">{{ ev.team1 }} vs {{ ev.team2 }}{% if ev.event_date %} · {{ ev.event_date }}{% endif %}</div>
+            </div>
+          </div>
+          {% endif %}
+        {% else %}
+          <div style="padding:24px;text-align:center;color:var(--muted2);font-size:14px;">No recent activity</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div><!-- /dash-left -->
+
+  <!-- RIGHT: Quick Actions + Sports + Users -->
+  <div class="dash-right">
+
+    <!-- Quick Actions -->
+    <div class="dash-section">
+      <div class="ds-head"><h3>⚡ Quick Actions</h3></div>
+      <div class="quick-actions">
+        <a href="/admin/events"        class="quick-action-btn"><span class="qa-icon">➕</span>New Event</a>
+        <a href="/admin/users"         class="quick-action-btn"><span class="qa-icon">👥</span>Users</a>
+        <a href="/admin/registrations" class="quick-action-btn"><span class="qa-icon">📋</span>Registrations</a>
+        <a href="/admin/sports"        class="quick-action-btn"><span class="qa-icon">🏆</span>Sports Config</a>
+        <a href="/leaderboard" target="_blank" class="quick-action-btn"><span class="qa-icon">📊</span>Leaderboard</a>
+        <a href="/scoreboard"  target="_blank" class="quick-action-btn"><span class="qa-icon">🎯</span>Scoreboard</a>
+      </div>
+    </div>
+
+    <!-- Sport Stats with progress bars -->
+    <div class="dash-section">
+      <div class="ds-head">
+        <h3>🏟️ Sports Overview</h3>
+        <a href="/admin/sports">Manage →</a>
+      </div>
+      <div class="ds-body">
+        {% set max_total = namespace(val=1) %}
+        {% for s in sport_stats %}{% if (s.total or 0) > max_total.val %}{% set max_total.val = s.total %}{% endif %}{% endfor %}
+        {% for s in sport_stats %}
+        <div class="sport-row">
+          <div class="sport-icon-wrap">{{ s.icon }}</div>
+          <div class="sport-info">
+            <div class="sport-name">{{ s.name }}</div>
+            <div class="sport-bar-wrap">
+              <div class="sport-bar" style="width:{{ ((s.total or 0) / max_total.val * 100)|round|int }}%"></div>
+            </div>
+          </div>
+          <div class="sport-counts">
+            <div>{{ s.total or 0 }} events</div>
+            {% if s.live_cnt %}<div class="sport-live-badge">● {{ s.live_cnt }} live</div>{% endif %}
+            {% if s.done %}<div style="color:var(--muted2);">{{ s.done }} done</div>{% endif %}
+          </div>
+        </div>
+        {% else %}
+          <div style="padding:20px;text-align:center;color:var(--muted2);font-size:14px;">No sports configured yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Recent Users -->
+    <div class="dash-section">
+      <div class="ds-head">
+        <h3>👤 New Users</h3>
+        <a href="/admin/users">View all →</a>
+      </div>
+      <div class="ds-body">
+        {% for u in recent_users %}
+        <div class="user-row">
+          <div class="user-avatar">{{ u.username[0] }}</div>
+          <div class="user-meta">
+            <div class="user-name">{{ u.full_name or u.username }}</div>
+            <div class="user-handle">@{{ u.username }}</div>
+          </div>
+          <div class="user-date">{{ u.created_at[:10] if u.created_at else '—' }}</div>
+        </div>
+        {% else %}
+          <div style="padding:20px;text-align:center;color:var(--muted2);font-size:14px;">No users yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div><!-- /dash-right -->
+</div><!-- /dash-main -->
+
+{% endblock %}

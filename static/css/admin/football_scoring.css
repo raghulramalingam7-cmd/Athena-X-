@@ -1,0 +1,91 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Football Scoring Page
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes blink { 0%, 100% { opacity: 1 } 50% { opacity: .5 } }
+
+/* ── Player rows (live match) ── */
+.player-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.pr-num {
+  background: rgba(96,165,250,.12); border-radius: 5px;
+  padding: 2px 8px; font-size: 12px; font-weight: 800;
+  color: #60a5fa; min-width: 38px; text-align: center;
+}
+.pr-name { flex: 1; font-weight: 600; }
+
+/* ── Event type buttons ── */
+.evt-btn {
+  padding: 7px 14px; background: var(--bg3);
+  border: 2px solid var(--border); border-radius: 8px;
+  color: var(--text); cursor: pointer; font-size: 13px;
+  font-weight: 600; transition: all .15s;
+}
+.evt-btn.active {
+  border-color: var(--accent);
+  background: rgba(96,165,250,.15); color: var(--accent);
+}
+
+/* ── Team selector buttons ── */
+.team-btn {
+  padding: 10px 20px; background: var(--bg3);
+  border: 2px solid var(--border); border-radius: 8px;
+  color: var(--text); cursor: pointer; font-size: 14px;
+  font-weight: 700; transition: all .15s; flex: 1;
+}
+.team-btn.active {
+  border-color: var(--accent);
+  background: rgba(96,165,250,.15); color: var(--accent);
+}
+
+/* ── Player selector buttons ── */
+.player-sel-btn {
+  padding: 5px 10px; background: var(--bg3);
+  border: 2px solid var(--border); border-radius: 7px;
+  cursor: pointer; font-size: 12px; font-weight: 700;
+  transition: all .1s; color: var(--text);
+}
+.player-sel-btn.active {
+  border-color: #10b981;
+  background: rgba(16,185,129,.15); color: #10b981;
+}
+
+/* ── Substitution buttons ── */
+.sub-out-btn {
+  padding: 5px 10px; background: var(--bg3);
+  border: 2px solid var(--border); border-radius: 7px;
+  cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text);
+}
+.sub-out-btn.active {
+  border-color: #ef4444;
+  background: rgba(239,68,68,.15); color: #ef4444;
+}
+.sub-in-btn, .rc-sub-btn {
+  padding: 6px 12px; background: var(--bg3);
+  border: 2px solid var(--border); border-radius: 7px;
+  cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text);
+}
+.sub-in-btn.active, .rc-sub-btn.active {
+  border-color: #10b981;
+  background: rgba(16,185,129,.15); color: #10b981;
+}
+
+/* ── Setup form (squad entry) ── */
+.ss-tabs { display:flex; gap:0; border-radius:9px; overflow:hidden; border:1px solid var(--border); margin-bottom:18px; }
+.ss-tab { flex:1; padding:10px 8px; font-size:14px; font-weight:700; border:none; cursor:pointer; background:var(--bg3); color:var(--muted); transition:var(--tr); }
+.ss-tab.active { background: var(--tab-color, #1a73e8); color: #fff; }
+.ss-badge { font-size:11px; border-radius:8px; padding:1px 6px; margin-left:5px; background:rgba(255,255,255,.15); }
+.ss-section-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 7px; }
+.ss-sub-label { color: var(--yellow); }
+.ss-row { display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+.ss-num { min-width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:11px; font-weight:800; flex-shrink:0; }
+.ss-num-main { color:var(--accent2); background:rgba(74,158,255,.1); }
+.ss-num-sub  { color:var(--yellow);  background:rgba(251,188,4,.1); }
+.ss-inp {
+  flex:1; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border);
+  background:var(--input-bg); color:var(--text); font-size:13px; outline:none;
+  transition:var(--tr); min-width:0;
+}
+.ss-inp:focus { border-color:var(--accent); }

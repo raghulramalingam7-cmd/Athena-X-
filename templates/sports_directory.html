@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Sports Directory — Athena-X{% endblock %}
+{% block content %}
+
+<div class="page-container">
+  <div class="page-header">
+    <div class="page-title-area">
+      <a href="/" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:6px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← Home</a>
+      <h1>🏆 Sports Directory</h1>
+      <p>{{ total_active }} active sports · {{ total_sports }} total</p>
+    </div>
+    <a href="/matches" class="btn btn-secondary btn-sm">📋 All Matches</a>
+  </div>
+
+  <!-- Sport cards grid -->
+  <div class="sports-dir-grid">
+    {% for s in sports %}
+    <a href="/matches?sport={{ s.id }}" class="sport-dir-card {% if not s.is_active %}disabled{% endif %}" style="text-decoration:none;">
+      <div class="sdc-icon">{{ s.icon }}</div>
+      <div class="sdc-name">{{ s.name }}</div>
+      {% if s.description %}<div class="sdc-desc">{{ s.description }}</div>{% endif %}
+      <div class="sdc-stats">
+        <div class="sdc-stat">
+          <div class="sdc-stat-num">{{ s.total_events }}</div>
+          <div class="sdc-stat-lbl">Events</div>
+        </div>
+        {% if s.live_events > 0 %}
+        <div class="sdc-stat">
+          <div class="sdc-stat-num" style="color:var(--red);">{{ s.live_events }}</div>
+          <div class="sdc-stat-lbl">Live</div>
+        </div>
+        {% endif %}
+        {% if s.upcoming_events > 0 %}
+        <div class="sdc-stat">
+          <div class="sdc-stat-num" style="color:#93c5fd;">{{ s.upcoming_events }}</div>
+          <div class="sdc-stat-lbl">Upcoming</div>
+        </div>
+        {% endif %}
+        <div class="sdc-stat">
+          <div class="sdc-stat-num">{{ s.total_registrations }}</div>
+          <div class="sdc-stat-lbl">Registered</div>
+        </div>
+      </div>
+      {% if not s.is_active %}
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);">Currently inactive</div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if not sports %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🏆</div>
+    <p>No sports configured yet. Ask an admin to add sports.</p>
+  </div>
+  {% endif %}
+
+  <!-- All Sports Matches Table -->
+  {% if sports %}
+  <div style="margin-top:48px;">
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:18px;">📊 All Sports at a Glance</h2>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Sport</th>
+            <th>Total Events</th>
+            <th>Live Now</th>
+            <th>Upcoming</th>
+            <th>Completed</th>
+            <th>Total Players</th>
+            <th style="text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sports %}
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:24px;">{{ s.icon }}</span>
+                <div>
+                  <div style="font-weight:800;">{{ s.name }}</div>
+                  {% if s.description %}<div class="td-muted" style="font-size:12px;">{{ s.description }}</div>{% endif %}
+                </div>
+              </div>
+            </td>
+            <td style="font-weight:700;font-size:16px;">{{ s.total_events }}</td>
+            <td>
+              {% if s.live_events > 0 %}
+                <span style="color:var(--red);font-weight:700;display:flex;align-items:center;gap:5px;"><span class="pulse-dot"></span>{{ s.live_events }}</span>
+              {% else %}
+                <span class="td-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if s.upcoming_events > 0 %}<span style="color:#93c5fd;font-weight:700;">{{ s.upcoming_events }}</span>{% else %}<span class="td-muted">—</span>{% endif %}
+            </td>
+            <td><span class="td-muted">{{ s.completed_events }}</span></td>
+            <td><span class="td-muted">{{ s.total_registrations }}</span></td>
+            <td class="td-right">
+              <a href="/matches?sport={{ s.id }}" class="tbl-btn tbl-btn-blue">View Matches</a>
+              {% if s.live_events > 0 %}
+                <a href="/matches?sport={{ s.id }}&status=live" class="tbl-btn tbl-btn-green">🔴 Live</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

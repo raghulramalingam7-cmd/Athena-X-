@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Viewer Login — Athena-X</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script>(function(){var t=localStorage.getItem('athena-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;background:var(--bg);font-family:var(--font-main,sans-serif);}
+    .page{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+    .left{background:linear-gradient(160deg,#0f172a 0%,#1e3a5f 50%,#0c4a6e 100%);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;}
+    .left::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 30% 40%,rgba(56,189,248,0.13) 0%,transparent 70%);}
+    .ring{position:absolute;border-radius:50%;border:1px solid rgba(56,189,248,0.1);animation:pulse-ring 6s ease-in-out infinite;}
+    .ring1{width:320px;height:320px;top:-80px;right:-80px;animation-delay:0s;}
+    .ring2{width:200px;height:200px;bottom:40px;left:-60px;animation-delay:2s;}
+    .ring3{width:140px;height:140px;top:50%;right:10%;animation-delay:4s;}
+    @keyframes pulse-ring{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.06);}}
+    .left-inner{position:relative;z-index:1;text-align:center;max-width:380px;}
+    .brand-emoji{font-size:80px;display:block;margin-bottom:20px;filter:drop-shadow(0 8px 32px rgba(56,189,248,0.4));}
+    .brand-name{font-size:42px;font-weight:900;color:#f8fafc;letter-spacing:-1px;margin-bottom:8px;}
+    .brand-name span{color:#38bdf8;}
+    .brand-tagline{font-size:16px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:36px;}
+    .live-dot{display:inline-flex;align-items:center;gap:6px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:#f87171;margin-bottom:28px;}
+    .live-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:#ef4444;animation:blink-dot 1s infinite;}
+    @keyframes blink-dot{0%,100%{opacity:1;}50%{opacity:0.3;}}
+    .feature-list{display:flex;flex-direction:column;gap:12px;width:100%;}
+    .feature{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;backdrop-filter:blur(8px);}
+    .feature-icon{font-size:24px;flex-shrink:0;}
+    .feature-text{font-size:13px;color:rgba(255,255,255,0.85);font-weight:600;text-align:left;}
+    .feature-sub{font-size:11px;color:rgba(255,255,255,0.45);font-weight:400;margin-top:2px;}
+    .right{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 56px;overflow-y:auto;}
+    .form-box{width:100%;max-width:400px;}
+    .role-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:24px;}
+    .form-heading{font-size:30px;font-weight:900;color:var(--text);margin-bottom:6px;}
+    .form-sub{font-size:14px;color:var(--muted2);margin-bottom:32px;}
+    .flash-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:20px;}
+    .flash-success{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);color:#4ade80;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:20px;}
+    .fgroup{margin-bottom:18px;}
+    .fgroup label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:7px;}
+    .iw{position:relative;}
+    .iw .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.55;pointer-events:none;}
+    .iw input{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);padding:12px 14px 12px 40px;font-size:14px;outline:none;transition:.15s;}
+    .iw input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.12);}
+    .btn-login{width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;margin-top:6px;}
+    .btn-login:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(56,189,248,.25);}
+    .divider{display:flex;align-items:center;gap:12px;color:var(--muted2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin:22px 0;}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+    .signup-box{text-align:center;padding:18px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);font-size:14px;color:var(--muted2);}
+    .signup-box a{color:#38bdf8;font-weight:700;text-decoration:none;}
+    .admin-hint{text-align:center;margin-top:14px;}
+    .admin-hint a{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);text-decoration:none;padding:6px 14px;border-radius:20px;border:1px solid var(--border);transition:.15s;}
+    .admin-hint a:hover{border-color:rgba(220,38,38,.4);color:#f87171;}
+    .admin-warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:14px 16px;margin-bottom:20px;text-align:center;}
+    .admin-warn strong{display:block;color:#fbbf24;font-size:13px;font-weight:700;margin-bottom:6px;}
+    .admin-warn a{color:#60a5fa;font-weight:700;font-size:13px;}
+    @media(max-width:768px){.page{grid-template-columns:1fr;}.left{display:none;}.right{padding:32px 24px;}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="left">
+    <div class="ring ring1"></div><div class="ring ring2"></div><div class="ring ring3"></div>
+    <div class="left-inner">
+      <div class="live-dot">🔴 Live Matches Now</div>
+      <span class="brand-emoji">🏟️</span>
+      <div class="brand-name">Athena<span>-X</span></div>
+      <div class="brand-tagline">Your all-in-one sports hub for live scores,<br>event tracking and player stats.</div>
+      <div class="feature-list">
+        <div class="feature"><span class="feature-icon">📡</span><div><div class="feature-text">Real-Time Live Scores</div><div class="feature-sub">Follow every match as it happens</div></div></div>
+        <div class="feature"><span class="feature-icon">🏆</span><div><div class="feature-text">8 Sports Covered</div><div class="feature-sub">Cricket, Kabaddi, Football &amp; more</div></div></div>
+        <div class="feature"><span class="feature-icon">📊</span><div><div class="feature-text">Player Stats &amp; Leaderboards</div><div class="feature-sub">Track performance across all events</div></div></div>
+        <div class="feature"><span class="feature-icon">📝</span><div><div class="feature-text">Register for Events</div><div class="feature-sub">Join upcoming tournaments instantly</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="form-box">
+      <a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.4);text-decoration:none;margin-bottom:18px;" onmouseover="this.style.color='#38bdf8'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">← Back to Site</a>
+      <div class="role-badge">👁️ Viewer / Fan Account</div>
+      <div class="form-heading">Welcome back 👋</div>
+      <div class="form-sub">Sign in to your Athena-X viewer account</div>
+      {% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, msg in msgs %}<div class="flash-{{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}
+      {% if show_admin_link %}
+      <div class="admin-warn">
+        <strong>🛡️ This is an Admin account</strong>
+        Admin accounts cannot sign in here.<br>
+        <a href="/admin/login">Go to Admin Portal →</a>
+      </div>
+      {% endif %}
+      <form method="POST" action="/login">
+        <div class="fgroup">
+          <label>Username or Email</label>
+          <div class="iw"><span class="ic">👤</span><input type="text" name="username" required placeholder="Enter your username or email" autofocus autocomplete="username"/></div>
+        </div>
+        <div class="fgroup">
+          <label>Password</label>
+          <div class="iw"><span class="ic">🔒</span><input type="password" name="password" required placeholder="Enter your password" autocomplete="current-password"/></div>
+        </div>
+        <button type="submit" class="btn-login">Sign In →</button>
+      </form>
+      <div class="divider">or</div>
+      <div class="signup-box">New to Athena-X? <a href="/register">Create a free account →</a></div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

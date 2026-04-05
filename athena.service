@@ -1,0 +1,49 @@
+# athena.service — systemd unit for Athena-X production server
+#
+# SETUP (one-time, as root):
+#   1. Copy this file:   sudo cp athena.service /etc/systemd/system/
+#   2. Edit WorkingDirectory and User below to match your setup
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable athena      ← auto-start on boot
+#   5. sudo systemctl start athena       ← start now
+#
+# USEFUL COMMANDS:
+#   sudo systemctl status athena         ← check status
+#   sudo systemctl restart athena        ← restart
+#   sudo journalctl -u athena -f         ← live logs
+
+[Unit]
+Description=Athena-X Sports Platform (HTTPS Production)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# ── EDIT THESE TWO LINES ──────────────────────────────────────────────────────
+User=ubuntu
+WorkingDirectory=/home/ubuntu/athena-v4-prod
+# ─────────────────────────────────────────────────────────────────────────────
+
+ExecStart=/bin/bash start.sh
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=on-failure
+RestartSec=5s
+
+# Environment
+Environment="ATHENA_PORT=5443"
+# Uncomment to override admin key:
+# Environment="ATHENA_ADMIN_KEY=YourSecretKey"
+
+# Logging — view with: journalctl -u athena -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=athena-x
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

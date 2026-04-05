@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>{% block title %}Admin{% endblock %} — Athena-X</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="stylesheet" href="/static/css/admin/base.css"/>
+  {% block head %}{% endblock %}
+  <style>
+    :root{
+      --ink-900:#0a0818;--ink-800:#110e2a;--ink-700:#1a1637;--ink-600:#231e48;
+      --violet-500:#7c3aed;--violet-400:#8b5cf6;--violet-300:#a78bfa;--violet-200:#c4b5fd;
+      --emerald-400:#34d399;--rose-400:#fb7185;--sky-400:#38bdf8;
+      --bg:var(--ink-900);--bg2:var(--ink-800);--bg3:var(--ink-700);--bg4:var(--ink-600);
+      --card:rgba(26,22,55,0.7);
+      --glass:rgba(255,255,255,0.04);--glass-h:rgba(255,255,255,0.07);
+      --border:rgba(139,92,246,0.12);--border2:rgba(139,92,246,0.22);
+      --text:#f1effe;--text2:#c4bff0;--muted:#8b84be;--muted2:#6b6490;
+      --accent:var(--violet-400);--accent2:var(--emerald-400);
+      --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+      --font-mono:'JetBrains Mono',monospace;--font-num:'Syne',sans-serif;
+      --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:28px;
+      --sh-sm:0 2px 8px rgba(0,0,0,0.3);--sh-md:0 6px 24px rgba(0,0,0,0.4);--sh-lg:0 16px 48px rgba(0,0,0,0.5);
+      --sh-vio:0 8px 32px rgba(124,58,237,0.25);
+      --tr:0.18s cubic-bezier(0.4,0,0.2,1);--tr-spring:0.35s cubic-bezier(0.34,1.56,0.64,1);
+      --grad-violet:linear-gradient(135deg,#7c3aed,#a855f7);
+    }
+    *,*::before,*::after{box-sizing:border-box}
+    body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;overflow-x:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.35}
+    .shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+    .ax-sidebar{background:rgba(10,8,24,0.97);border-right:1px solid var(--border);backdrop-filter:blur(20px);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:300;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)}
+    .sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .logo-mark{width:36px;height:36px;border-radius:10px;background:var(--grad-violet);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:16px;font-weight:900;color:#fff;box-shadow:var(--sh-vio);flex-shrink:0}
+    .logo-text{font-family:var(--font-display);font-size:17px;font-weight:900;color:var(--text);letter-spacing:-0.01em}
+    .logo-text span{color:var(--violet-300)}
+    .sidebar-close-btn{display:none;margin-left:auto;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color var(--tr);line-height:1}
+    .sidebar-close-btn:hover{color:var(--text)}
+    .sidebar-section{padding:18px 12px 6px}
+    .sidebar-section-label{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted2);padding:0 10px;margin-bottom:5px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:all var(--tr);position:relative;margin-bottom:2px;border:1px solid transparent}
+    .nav-item:hover{background:var(--glass-h);color:var(--text2);text-decoration:none}
+    .nav-item.active{background:rgba(139,92,246,0.12);color:var(--violet-300);font-weight:600;border-color:rgba(139,92,246,0.18)}
+    .nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;border-radius:0 3px 3px 0;background:var(--accent)}
+    .nav-item.danger{color:var(--rose-400)!important}
+    .nav-item.danger:hover{background:rgba(251,113,133,0.08);border-color:rgba(251,113,133,0.15)}
+    .nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+    .sidebar-footer{margin-top:auto;padding:16px 12px;border-top:1px solid var(--border)}
+    .admin-chip{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);background:var(--glass);border:1px solid var(--border);transition:background var(--tr);margin-bottom:10px}
+    .admin-avatar{width:32px;height:32px;border-radius:50%;background:var(--grad-violet);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#fff;flex-shrink:0}
+    .admin-info{flex:1;min-width:0}
+    .admin-name{font-size:12px;font-weight:600;color:var(--text2)}
+    .admin-role{font-size:10px;color:var(--violet-300);text-transform:uppercase;letter-spacing:0.06em;font-weight:700}
+    .ax-topbar{background:rgba(10,8,24,0.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:13px 28px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:200}
+    .topbar-hamburger{display:none;background:none;border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:var(--r-sm);cursor:pointer;align-items:center;justify-content:center;font-size:18px;transition:all var(--tr);flex-shrink:0}
+    .topbar-hamburger:hover{background:var(--glass-h);border-color:var(--border2)}
+    .topbar-title{font-family:var(--font-display);font-size:17px;font-weight:900;color:var(--text);letter-spacing:-0.01em}
+    .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+    .topbar-search{display:flex;align-items:center;gap:8px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 14px;width:200px;transition:all var(--tr)}
+    .topbar-search:hover{border-color:var(--border2);background:var(--glass-h)}
+    .ax-icon-btn{width:36px;height:36px;border-radius:var(--r-sm);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all var(--tr);position:relative;color:var(--text);text-decoration:none;background:none}
+    .ax-icon-btn:hover{background:var(--glass-h);border-color:var(--border2);color:var(--text);text-decoration:none}
+    #notif-badge{display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:800;line-height:16px;text-align:center}
+    #notif-panel{display:none;position:absolute;right:0;top:44px;width:320px;background:var(--ink-800,#110e2a);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);z-index:9999;overflow:hidden}
+    .ax-main{padding:28px;display:flex;flex-direction:column;gap:0;min-width:0}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--r-sm);font-size:13px;font-weight:700;border:none;cursor:pointer;transition:all var(--tr);text-decoration:none;line-height:1;white-space:nowrap;font-family:var(--font-body)}
+    .btn:hover{text-decoration:none}
+    .btn-primary{background:var(--grad-violet);color:#fff;box-shadow:0 4px 16px rgba(124,58,237,0.35)}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,58,237,0.5);color:#fff}
+    .btn-sm{padding:6px 14px;font-size:12px}
+    .admin-flash{margin:0 0 18px;border-radius:var(--r-sm);padding:13px 18px;font-size:14px;display:flex;align-items:center;gap:10px}
+    .flash-success{background:rgba(34,197,94,.08);color:#4ade80;border:1px solid rgba(34,197,94,.2);border-left:3px solid #22c55e}
+    .flash-error{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.2);border-left:3px solid #ef4444}
+    .flash-info{background:rgba(56,189,248,.08);color:#38bdf8;border:1px solid rgba(56,189,248,.2);border-left:3px solid #0ea5e9}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes live-pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,0.6)}70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+    /* ── Mobile overlay ── */
+    .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:250;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+    /* ── Admin Mobile Bottom Nav ── */
+    .admin-mobile-nav{display:none}
+    /* ════════════════════ MOBILE ════════════════════ */
+    @media(max-width:768px){
+      .shell{grid-template-columns:1fr}
+      .ax-sidebar{position:fixed;left:0;top:0;height:100vh;width:280px;transform:translateX(-100%);z-index:400;box-shadow:4px 0 32px rgba(0,0,0,0.6)}
+      .ax-sidebar.open{transform:translateX(0)}
+      .sidebar-close-btn{display:flex;align-items:center;justify-content:center}
+      .sidebar-overlay.visible{display:block}
+      .ax-topbar{padding:10px 14px}
+      .topbar-hamburger{display:flex}
+      .topbar-search{display:none}
+      .topbar-title{font-size:15px}
+      .ax-main{padding:16px 14px;padding-bottom:76px}
+      .admin-mobile-nav{
+        display:flex;position:fixed;bottom:0;left:0;right:0;z-index:9998;
+        background:rgba(10,8,24,0.97);border-top:1px solid var(--border2);
+        height:60px;padding:0 4px;
+        padding-bottom:env(safe-area-inset-bottom,0px);
+        box-shadow:0 -4px 28px rgba(0,0,0,0.55);
+        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)
+      }
+      .amn-tab{
+        flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        gap:2px;text-decoration:none;color:var(--muted);
+        transition:color .2s,transform .15s;padding:6px 0;position:relative;
+        -webkit-tap-highlight-color:transparent;font-family:var(--font-body);
+        border:none;background:none;cursor:pointer
+      }
+      .amn-tab:active{transform:scale(0.88)}
+      .amn-icon{font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;height:22px}
+      .amn-label{font-size:9px;font-weight:600;letter-spacing:.3px;line-height:1;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .amn-active,.amn-active .amn-label{color:var(--violet-300)!important}
+      .amn-active .amn-icon{filter:drop-shadow(0 0 6px rgba(139,92,246,.7))}
+      .amn-active::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:28px;height:2px;background:var(--violet-400);border-radius:0 0 4px 4px;box-shadow:0 0 8px rgba(139,92,246,.7)}
+    }
+    @media(min-width:769px){.admin-mobile-nav{display:none!important}}
+  </style>
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="shell">
+  <aside class="ax-sidebar" id="ax-sidebar">
+    <div class="sidebar-logo">
+      <img src="/static/logo.png" alt="Athena-X" style="height:48px;width:auto;object-fit:contain;">
+      <div class="logo-text">Athena<span>-X</span></div>
+      <button class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Main</div>
+      <a href="/admin/dashboard" class="nav-item {% if request.endpoint=='admin_dashboard' %}active{% endif %}" onclick="closeSidebar()"><span class="nav-icon">📊</span> Dashboard</a>
+      <a href="/admin/events"    class="nav-item {% if 'admin_event' in request.endpoint %}active{% endif %}" onclick="closeSidebar()"><span class="nav-icon">📅</span> Events</a>
+      <a href="/admin/sports"    class="nav-item {% if 'admin_sport' in request.endpoint %}active{% endif %}" onclick="closeSidebar()"><span class="nav-icon">🏆</span> Sports</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">People</div>
+      <a href="/admin/registrations" class="nav-item {% if 'admin_registrations' in request.endpoint %}active{% endif %}" onclick="closeSidebar()"><span class="nav-icon">📋</span> Registrations</a>
+      <a href="/admin/users"         class="nav-item {% if 'admin_users' in request.endpoint %}active{% endif %}" onclick="closeSidebar()"><span class="nav-icon">👥</span> Users</a>
+      <a href="/admin/settings"      class="nav-item {% if 'admin_settings' in request.endpoint %}active{% endif %}" onclick="closeSidebar()"><span class="nav-icon">⚙️</span> Settings</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Public</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="admin-chip">
+        <div class="admin-avatar">{{ session.get('username','A')[0].upper() if session.get('username') else 'A' }}</div>
+        <div class="admin-info">
+          <div class="admin-name">{{ session.get('username','Admin') }}</div>
+          <div class="admin-role">Administrator</div>
+        </div>
+      </div>
+      <a href="/admin/logout" class="nav-item danger"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+  </aside>
+  <div style="display:flex;flex-direction:column;min-width:0;overflow:hidden">
+    <header class="ax-topbar">
+      <button class="topbar-hamburger" onclick="openSidebar()">☰</button>
+      <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+      <div class="topbar-right">
+        <div class="topbar-search">
+          <span style="font-size:13px;">🔍</span>
+          <span style="font-size:12px;color:var(--muted2);flex:1;">Search…</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted2);background:var(--ink-700,#1a1637);padding:2px 5px;border-radius:4px;border:1px solid var(--border2);">⌘K</span>
+        </div>
+        <div style="position:relative;">
+          <button id="notif-btn" class="ax-icon-btn" onclick="toggleNotifPanel()" title="Live Alerts" style="border:1px solid var(--border);">
+            🔔<span id="notif-badge"></span>
+          </button>
+          <div id="notif-panel">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:13px;font-weight:800;">🔔 Live Alerts</span>
+              <button onclick="clearNotifs()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-weight:700;">Clear all</button>
+            </div>
+            <div id="notif-list" style="max-height:340px;overflow-y:auto;padding:6px 0;">
+              <div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No alerts yet</div>
+            </div>
+          </div>
+        </div>
+        <button class="ax-icon-btn" id="theme-toggle" title="Toggle theme" style="border:1px solid var(--border);"><span id="theme-icon">🌙</span></button>
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+    <div class="ax-main">
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% if msgs %}{% for cat,msg in msgs %}<div class="admin-flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}{% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<!-- Admin Mobile Bottom Nav -->
+<nav class="admin-mobile-nav">
+  <a href="/admin/dashboard" class="amn-tab {% if request.endpoint=='admin_dashboard' %}amn-active{% endif %}">
+    <span class="amn-icon">📊</span><span class="amn-label">Dashboard</span>
+  </a>
+  <a href="/admin/events" class="amn-tab {% if 'admin_event' in request.endpoint %}amn-active{% endif %}">
+    <span class="amn-icon">📅</span><span class="amn-label">Events</span>
+  </a>
+  <a href="/admin/registrations" class="amn-tab {% if 'admin_registrations' in request.endpoint %}amn-active{% endif %}">
+    <span class="amn-icon">📋</span><span class="amn-label">Regs</span>
+  </a>
+  <a href="/admin/settings" class="amn-tab {% if 'admin_settings' in request.endpoint %}amn-active{% endif %}">
+    <span class="amn-icon">⚙️</span><span class="amn-label">Settings</span>
+  </a>
+  <button class="amn-tab" onclick="openSidebar()">
+    <span class="amn-icon">☰</span><span class="amn-label">More</span>
+  </button>
+</nav>
+
+<script>
+(function(){
+  var html=document.documentElement,btn=document.getElementById('theme-toggle'),icon=document.getElementById('theme-icon');
+  function apply(t){html.setAttribute('data-theme',t);if(icon)icon.textContent=t==='dark'?'🌙':'☀️';localStorage.setItem('athena-theme',t);}
+  apply(localStorage.getItem('athena-theme')||'dark');
+  if(btn)btn.addEventListener('click',function(){apply(html.getAttribute('data-theme')==='dark'?'light':'dark');});
+})();
+function openSidebar(){
+  document.getElementById('ax-sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('visible');
+  document.body.style.overflow='hidden';
+}
+function closeSidebar(){
+  document.getElementById('ax-sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('visible');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSidebar();});
+</script>
+{% block scripts %}{% endblock %}
+<script>
+(function(){
+  let _prevScores={},_notifications=[],_unread=0;
+  try{_notifications=JSON.parse(localStorage.getItem('athena-notifs')||'[]');}catch(e){}
+  function saveNotifs(){try{localStorage.setItem('athena-notifs',JSON.stringify(_notifications.slice(0,40)));}catch(e){}}
+  function pushNotif(icon,title,body,eid){
+    _unread++;const n={icon,title,body,eid,ts:Date.now()};
+    _notifications.unshift(n);saveNotifs();renderNotifs();
+    if(typeof Notification!=='undefined'&&Notification.permission==='granted'){try{new Notification(icon+' '+title,{body,tag:'athena-'+eid});}catch(e){}}
+    const badge=document.getElementById('notif-badge');
+    if(badge){badge.style.display='block';badge.textContent=_unread>9?'9+':_unread;}
+    const b=document.getElementById('notif-btn');if(b){b.style.borderColor='#ef4444';setTimeout(()=>{b.style.borderColor='';},2000);}
+  }
+  function renderNotifs(){
+    const list=document.getElementById('notif-list');if(!list)return;
+    if(!_notifications.length){list.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">No alerts yet</div>';return;}
+    list.innerHTML=_notifications.slice(0,20).map(n=>{
+      const ago=Math.floor((Date.now()-n.ts)/60000),agoStr=ago<1?'just now':ago+'m ago';
+      return`<div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;" onclick="window.location='/admin/events/${n.eid||0}'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div><div style="font-size:13px;font-weight:700;color:var(--text);">${n.icon||'🏆'} ${n.title}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${n.body}</div></div>
+          <div style="font-size:10px;color:var(--muted2);white-space:nowrap;margin-top:2px;">${agoStr}</div>
+        </div></div>`;
+    }).join('');
+  }
+  window.toggleNotifPanel=function(){const p=document.getElementById('notif-panel');if(!p)return;const o=p.style.display!=='none';p.style.display=o?'none':'block';if(!o){_unread=0;const b=document.getElementById('notif-badge');if(b)b.style.display='none';renderNotifs();}};
+  window.clearNotifs=function(){_notifications=[];saveNotifs();renderNotifs();};
+  document.addEventListener('click',function(e){const b=document.getElementById('notif-btn'),p=document.getElementById('notif-panel');if(!b||!p)return;if(!p.contains(e.target)&&e.target!==b&&!b.contains(e.target))p.style.display='none';});
+  if(typeof Notification!=='undefined'&&Notification.permission==='default')setTimeout(()=>Notification.requestPermission(),3000);
+  async function pollMatches(){try{const r=await fetch('/api/live_matches');if(!r.ok)return;const matches=await r.json();matches.forEach(m=>{const key=m.id,prev=_prevScores[key],scoreStr=(m.score_t1!==null&&m.score_t2!==null)?`${m.score_t1} – ${m.score_t2}`:'',extra=m.extra?` (${m.extra})`:'';if(!prev){if(m.status==='live')pushNotif(m.sport_icon||'🏆',m.title,'Match is LIVE! '+scoreStr+extra,m.id);}else{if(m.score_t1!==prev.score_t1||m.score_t2!==prev.score_t2||m.extra!==prev.extra){if(m.status==='live')pushNotif(m.sport_icon||'🏆',m.title,'Score update: '+scoreStr+extra,m.id);}if(m.status==='completed'&&prev.status!=='completed')pushNotif('🏆',m.title+' — FINAL',m.result||scoreStr+' — Match over',m.id);}_prevScores[key]={score_t1:m.score_t1,score_t2:m.score_t2,status:m.status,extra:m.extra};});}catch(e){}}
+  renderNotifs();pollMatches();setInterval(pollMatches,8000);
+})();
+</script>
+</body>
+</html>

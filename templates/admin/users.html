@@ -1,0 +1,57 @@
+{% extends "admin/base.html" %}
+{% block title %}Users{% endblock %}
+{% block page_title %}👥 Users{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin" class="btn btn-secondary btn-sm">← Dashboard</a>
+  <span style="font-size:13px;color:var(--muted2);padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;">
+    {{ users|length }} registered
+  </span>
+{% endblock %}
+{% block content %}
+
+<div class="dash-section" style="border-radius:14px;overflow:hidden;border:1px solid var(--border);">
+  <div class="ds-head">
+    <h3>👥 All Viewer Accounts</h3>
+  </div>
+  {% if users %}
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th style="width:40px;">#</th>
+        <th>User</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th style="text-align:center;">Registrations</th>
+        <th>Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+      <td class="muted-cell" style="font-size:11px;">{{ loop.index }}</td>
+      <td>
+        <div class="user-cell">
+          <div class="user-avatar-sm">{{ u.username[0].upper() }}</div>
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--text);">{{ u.username }}</div>
+            {% if u.full_name %}<div class="muted-text">{{ u.full_name }}</div>{% endif %}
+          </div>
+        </div>
+      </td>
+      <td class="muted-cell">{{ u.email }}</td>
+      <td class="muted-cell">{{ u.phone or '—' }}</td>
+      <td style="text-align:center;"><span class="reg-count-badge">{{ u.reg_count }}</span></td>
+      <td class="muted-cell">{{ u.created_at[:10] if u.created_at else '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:48px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">👥</div>
+    <div style="font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px;">No users yet</div>
+    <div style="font-size:13px;color:var(--muted2);">Users will appear here once they register on the viewer portal.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

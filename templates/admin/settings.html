@@ -1,0 +1,92 @@
+{% extends "admin/base.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}⚙️ Site Settings{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin" class="btn btn-secondary btn-sm">← Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<style>
+.settings-wrap{max-width:680px;margin:0 auto;}
+.settings-card{background:rgba(26,22,55,0.5);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px;backdrop-filter:blur(8px);}
+.settings-section-title{font-size:11px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.settings-section-title .s-icon{font-size:15px;}
+.settings-field{margin-bottom:16px;}
+.settings-field label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.settings-field input,.settings-field textarea{width:100%;padding:10px 13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:14px;box-sizing:border-box;transition:border-color var(--tr),box-shadow var(--tr);outline:none;font-family:var(--font-body);}
+.settings-field input:focus,.settings-field textarea:focus{border-color:var(--violet-400);box-shadow:0 0 0 3px rgba(139,92,246,0.12);}
+.settings-field textarea{resize:vertical;min-height:72px;}
+.settings-field .hint{font-size:11px;color:var(--muted2);margin-top:5px;line-height:1.5;}
+/* API Key field */
+/* QR */
+.preview-qr-wrap{border:1px dashed rgba(0,200,150,.4);border-radius:12px;padding:20px;text-align:center;background:rgba(0,200,150,.04);margin-top:16px;}
+.preview-qr-wrap img{border-radius:8px;background:#fff;padding:8px;}
+.copy-btn{padding:5px 12px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:.15s;}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent);}
+/* Save row */
+.save-row{display:flex;gap:10px;flex-wrap:wrap;}
+.save-row .btn{flex:1;min-width:180px;padding:12px;font-size:14px;justify-content:center;}
+@media(max-width:480px){.settings-card{padding:16px;}.save-row .btn{min-width:100%;}}
+</style>
+
+<div class="settings-wrap">
+  <form method="POST" action="/admin/settings">
+
+    <!-- Organisation -->
+    <div class="settings-card">
+      <div class="settings-section-title"><span class="s-icon">🏆</span> Organisation</div>
+      <div class="settings-field">
+        <label>Organisation / Tournament Name</label>
+        <input type="text" name="org_name" value="{{ settings.org_name }}" placeholder="e.g. Athena Sports Club" maxlength="120">
+        <div class="hint">Shown on the public registration page and QR code.</div>
+      </div>
+    </div>
+
+
+    <!-- Google Form Registration -->
+    <div class="settings-card">
+      <div class="settings-section-title"><span class="s-icon">📋</span> Player Registration (Google Form)</div>
+      <div class="settings-field">
+        <label>Google Form URL</label>
+        <input type="url" name="gform_url" id="gform-url-input" value="{{ settings.gform_url }}"
+               placeholder="https://forms.gle/…" oninput="updateQRPreview()" maxlength="1000">
+        <div class="hint">
+          Paste your Google Form link. Players scan the QR code at <strong>/join</strong> to open it.
+          <br>Get a link: <em>Google Forms → Share → Copy link</em>.
+        </div>
+      </div>
+      <div class="settings-field">
+        <label>Page Title</label>
+        <input type="text" name="gform_title" value="{{ settings.gform_title }}" placeholder="Player Registration" maxlength="120">
+      </div>
+      <div class="settings-field">
+        <label>Description</label>
+        <textarea name="gform_desc" placeholder="Register to participate in our upcoming events." maxlength="500">{{ settings.gform_desc }}</textarea>
+      </div>
+      <div class="preview-qr-wrap" id="qr-preview-wrap" style="{% if not settings.gform_url %}display:none{% endif %}">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">📱 QR Code Preview — points to your form</div>
+        <img id="qr-preview-img" src="" alt="QR Code" width="180" height="180">
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <a id="join-page-link" href="/join" target="_blank" style="font-size:12px;color:#00ffb2;font-weight:700;">👁 Preview /join page</a>
+          <button type="button" class="copy-btn" onclick="navigator.clipboard.writeText(window.location.origin+'/join');this.textContent='Copied!'">📋 Copy /join URL</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="save-row">
+      <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function qrUrl(text){return`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(text)}&bgcolor=ffffff&color=1a1a2e&qzone=1`;}
+function updateQRPreview(){
+  const url=document.getElementById('gform-url-input').value.trim();
+  const wrap=document.getElementById('qr-preview-wrap');
+  const img=document.getElementById('qr-preview-img');
+  if(url){img.src=qrUrl(url);wrap.style.display='';}else{wrap.style.display='none';}
+}
+updateQRPreview();
+</script>
+{% endblock %}

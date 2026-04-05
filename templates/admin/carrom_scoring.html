@@ -1,0 +1,486 @@
+{% extends "admin/base.html" %}
+{% block title %}Carrom Scoring{% endblock %}
+{% block page_title %}🎯 Carrom — {{ event.team1 }} vs {{ event.team2 }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="/admin/events/{{ event.id }}" class="btn btn-secondary btn-sm">← Back</a>
+<a href="/carrom/{{ event.id }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-left:6px;">👁 Public View</a>
+
+{% endblock %}
+
+{% block content %}
+<style>
+.cs-wrap{max-width:600px;margin:0 auto;padding:0 4px 32px;}
+.cs-setup{background:var(--bg-card);border-radius:14px;padding:28px 24px;}
+.cs-setup h2{margin:0 0 6px;font-size:18px;text-align:center;}
+.cs-setup .sub{color:var(--muted);font-size:13px;text-align:center;margin-bottom:24px;}
+.cs-field{margin-bottom:14px;}
+.cs-field label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.cs-field select,.cs-field input[type=text]{width:100%;padding:10px 12px;background:var(--bg-dark);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;}
+.cs-field .hint{font-size:11px;color:var(--muted);margin-top:4px;}
+.cs-section-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.cs-rule-box{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px;margin:16px 0;font-size:12px;color:var(--muted);line-height:1.7;}
+.cs-boards{display:grid;grid-template-columns:1fr 60px 1fr;align-items:stretch;background:var(--bg-card);border-radius:14px;overflow:hidden;margin-bottom:16px;border:1px solid var(--border);}
+.cs-team{padding:18px 12px;text-align:center;}
+.cs-team.t1{background:linear-gradient(135deg,rgba(16,185,129,.1),transparent);}
+.cs-team.t2{background:linear-gradient(135deg,transparent,rgba(245,158,11,.1));}
+.cs-team-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.cs-team-players{font-size:10px;color:var(--muted);margin-bottom:8px;min-height:14px;}
+.cs-boards-big{font-size:48px;font-weight:900;line-height:1;color:var(--accent);}
+.cs-boards-label{font-size:10px;color:var(--muted);margin-top:2px;}
+.cs-sep{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--muted);padding:8px 4px;border-left:1px solid var(--border);border-right:1px solid var(--border);gap:4px;}
+.cs-board-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.cs-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid transparent;}
+.cs-chip.active{background:rgba(0,200,150,.15);color:#00ffb2;border-color:rgba(0,200,150,.4);border-style:dashed;}
+.cs-chip.t1{background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3);}
+.cs-chip.t2{background:rgba(245,158,11,.15);color:#fbbf24;border-color:rgba(245,158,11,.3);}
+.cs-board-card{background:var(--bg-card);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid var(--border);}
+.cs-board-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cs-board-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.cs-board-live{font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:#f87171;border-radius:20px;padding:3px 10px;animation:cs-pulse 1.5s infinite;}
+.cs-score-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:12px;}
+.cs-score-team{text-align:center;}
+.cs-score-name{font-size:11px;color:var(--muted);margin-bottom:3px;}
+.cs-score-pts{font-size:36px;font-weight:900;line-height:1;}
+.cs-score-to25{font-size:10px;color:var(--muted);margin-top:2px;}
+.cs-score-dash{font-size:20px;color:var(--muted);}
+.cs-progress-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cs-progress-label{font-size:10px;color:var(--muted);margin-bottom:3px;display:flex;justify-content:space-between;}
+.cs-progress-track{height:6px;background:var(--bg-dark);border-radius:3px;overflow:hidden;}
+.cs-progress-fill{height:100%;border-radius:3px;transition:width .4s;}
+.cs-teams-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.cs-team-panel{background:var(--bg-card);border-radius:10px;padding:14px;border:1px solid var(--border);}
+.cs-team-panel-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.cs-team-panel.t1 .cs-team-panel-name{color:#34d399;}
+.cs-team-panel.t2 .cs-team-panel-name{color:#fbbf24;}
+.cs-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.cs-action{padding:10px 6px;border-radius:8px;border:1px solid transparent;cursor:pointer;text-align:center;transition:.15s;font-size:12px;font-weight:700;line-height:1.2;}
+.cs-action:active{transform:scale(.95);}
+.cs-action .cs-emoji{font-size:18px;display:block;margin-bottom:2px;}
+.cs-action .cs-pts{font-size:10px;opacity:.75;display:block;margin-top:1px;}
+.ca-piece{background:rgba(0,200,150,.12);color:#00ffb2;border-color:rgba(0,200,150,.25);}
+.ca-piece:hover{background:rgba(0,200,150,.22);}
+.ca-queen{background:rgba(245,158,11,.12);color:#fbbf24;border-color:rgba(245,158,11,.25);}
+.ca-queen:hover{background:rgba(245,158,11,.22);}
+.ca-queen-done{background:rgba(245,158,11,.06);color:rgba(251,191,36,.4);border-color:rgba(245,158,11,.1);cursor:not-allowed;}
+.ca-penalty{background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.2);}
+.ca-penalty:hover{background:rgba(239,68,68,.2);}
+.ca-due{background:rgba(16,185,129,.1);color:#4ade80;border-color:rgba(16,185,129,.2);}
+.ca-due:hover{background:rgba(16,185,129,.2);}
+.cs-controls{display:flex;gap:8px;margin-bottom:12px;}
+.cs-undo-btn{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;}
+.cs-undo-btn:hover{border-color:#f59e0b;color:#f59e0b;background:rgba(245,158,11,.06);}
+.cs-end-board-btn{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:#fbbf24;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;}
+.cs-end-board-btn:hover{background:rgba(245,158,11,.2);}
+.cs-end-match-btn{width:100%;padding:11px;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:#f87171;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;margin-bottom:14px;}
+.cs-end-match-btn:hover{background:rgba(239,68,68,.18);}
+.cs-log{background:var(--bg-card);border-radius:10px;padding:14px;border:1px solid var(--border);max-height:240px;overflow-y:auto;}
+.cs-log-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.cs-log-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.cs-log-item:last-child{border:none;}
+.cs-log-badge{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.cs-result-banner{background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;}
+.cs-result-banner h2{color:#fff;margin:0 0 4px;font-size:18px;}
+.cs-result-banner p{color:rgba(255,255,255,.85);margin:0;font-size:13px;}
+#cs-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:9999;white-space:nowrap;}
+#cs-toast.show{opacity:1;}
+@keyframes cs-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+</style>
+
+{% if not state %}
+<!-- ══ SETUP ══ -->
+<div class="cs-wrap">
+  <div class="cs-setup">
+    <h2>🎯 Setup Carrom Match</h2>
+    <p class="sub">{{ event.team1 }} vs {{ event.team2 }}</p>
+    <form method="POST" action="/admin/carrom/{{ event.id }}/start" onsubmit="return csCollect()">
+      <div class="cs-field">
+        <label>Player Mode</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
+          <label style="cursor:pointer;" onclick="csSelectMode('singles')">
+            <input type="radio" name="match_type" value="singles" checked style="display:none;">
+            <div id="cs-mode-singles" style="border:2px solid var(--accent);background:rgba(0,200,150,0.10);border-radius:12px;padding:14px;text-align:center;transition:.2s;">
+              <div style="font-size:26px;margin-bottom:5px;">🎯</div>
+              <div style="font-weight:800;font-size:14px;color:var(--accent);">Singles</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">1 vs 1</div>
+            </div>
+          </label>
+          <label style="cursor:pointer;" onclick="csSelectMode('doubles')">
+            <input type="radio" name="match_type" value="doubles" style="display:none;">
+            <div id="cs-mode-doubles" style="border:2px solid var(--border2);background:var(--bg3);border-radius:12px;padding:14px;text-align:center;transition:.2s;">
+              <div style="font-size:26px;margin-bottom:5px;">🤝</div>
+              <div style="font-weight:800;font-size:14px;color:var(--muted);">Doubles</div>
+              <div style="font-size:11px;color:var(--muted2);margin-top:2px;">2 vs 2</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="cs-field">
+        <label>Total Boards</label>
+        <select name="total_boards">
+          <option value="1">1 Board</option>
+          <option value="3" selected>Best of 3</option>
+          <option value="5">Best of 5</option>
+          <option value="7">Best of 7</option>
+        </select>
+      </div>
+      <div class="cs-section-title">{{ event.team1 }} — Player Names</div>
+
+      <!-- Singles: 1 input per team -->
+      <div id="cs-singles-players" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#00c896;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">{{ event.team1 }}</div>
+          <input type="text" id="cs-singles-p1" placeholder="Player name"
+            oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+            style="width:100%;padding:9px 11px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">{{ event.team2 }}</div>
+          <input type="text" id="cs-singles-p2" placeholder="Player name"
+            oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+            style="width:100%;padding:9px 11px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- Doubles: 2 inputs per team -->
+      <div id="cs-doubles-players" style="display:none;">
+        <div style="margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:#00c896;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">{{ event.team1 }}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <input type="text" id="cs-d-t1p1" placeholder="Player 1" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+              style="padding:9px 11px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;width:100%;box-sizing:border-box;">
+            <input type="text" id="cs-d-t1p2" placeholder="Player 2" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+              style="padding:9px 11px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;width:100%;box-sizing:border-box;">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">{{ event.team2 }}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <input type="text" id="cs-d-t2p1" placeholder="Player 1" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+              style="padding:9px 11px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;width:100%;box-sizing:border-box;">
+            <input type="text" id="cs-d-t2p2" placeholder="Player 2" oninput="this.value=this.value.replace(/[^A-Za-z ]/g,'')"
+              style="padding:9px 11px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;width:100%;box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" name="team1_players" id="h-cs-t1-players">
+      <input type="hidden" name="team2_players" id="h-cs-t2-players">
+      <div id="cs-player-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:13px;"></div>
+      <div class="cs-rule-box">
+        🎯 <strong style="color:var(--text);">Scoring:</strong><br>
+        ⚫ Piece = <b>+1</b> &nbsp;·&nbsp; 👑 Queen = <b>+5</b> &nbsp;·&nbsp; ⚠️ Penalty = opponent <b>+1</b> &nbsp;·&nbsp; 📌 Due = <b>+1</b><br>
+        First to <strong style="color:var(--text);">25 points</strong> wins a board. Win majority of boards to win the match.
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:13px;font-size:15px;">🎯 Start Carrom Match</button>
+    </form>
+  </div>
+</div>
+<script>
+function csSelectMode(val) {
+  document.querySelector('[name=match_type][value="' + val + '"]').checked = true;
+  csUpdateMode({ value: val });
+}
+function csUpdateMode(radio) {
+  const isSingles = radio.value === 'singles';
+  const sEl = document.getElementById('cs-mode-singles');
+  const dEl = document.getElementById('cs-mode-doubles');
+  if (sEl) {
+    sEl.style.cssText = isSingles
+      ? 'border:2px solid var(--accent);background:rgba(0,200,150,0.10);border-radius:12px;padding:14px;text-align:center;transition:.2s;'
+      : 'border:2px solid var(--border2);background:var(--bg3);border-radius:12px;padding:14px;text-align:center;transition:.2s;';
+    sEl.querySelector('div:nth-child(2)').style.color = isSingles ? 'var(--accent)' : 'var(--muted)';
+  }
+  if (dEl) {
+    dEl.style.cssText = !isSingles
+      ? 'border:2px solid var(--accent);background:rgba(0,200,150,0.10);border-radius:12px;padding:14px;text-align:center;transition:.2s;'
+      : 'border:2px solid var(--border2);background:var(--bg3);border-radius:12px;padding:14px;text-align:center;transition:.2s;';
+    dEl.querySelector('div:nth-child(2)').style.color = !isSingles ? 'var(--accent)' : 'var(--muted)';
+  }
+  const singlesEl = document.getElementById('cs-singles-players');
+  const doublesEl = document.getElementById('cs-doubles-players');
+  if (singlesEl) singlesEl.style.display = isSingles ? 'grid' : 'none';
+  if (doublesEl) doublesEl.style.display = isSingles ? 'none' : '';
+}
+function csCollect() {
+  const isSingles = document.querySelector('[name=match_type]:checked').value === 'singles';
+  const errEl = document.getElementById('cs-player-error');
+  errEl.style.display = 'none';
+  if (isSingles) {
+    const p1 = document.getElementById('cs-singles-p1').value.trim();
+    const p2 = document.getElementById('cs-singles-p2').value.trim();
+    if (!p1 || !p2) {
+      errEl.style.display = 'block';
+      errEl.textContent = '⚠ Please enter both player names to continue.';
+      return false;
+    }
+    document.getElementById('h-cs-t1-players').value = p1;
+    document.getElementById('h-cs-t2-players').value = p2;
+  } else {
+    const t1p1 = document.getElementById('cs-d-t1p1').value.trim();
+    const t1p2 = document.getElementById('cs-d-t1p2').value.trim();
+    const t2p1 = document.getElementById('cs-d-t2p1').value.trim();
+    const t2p2 = document.getElementById('cs-d-t2p2').value.trim();
+    if (!t1p1 || !t1p2 || !t2p1 || !t2p2) {
+      errEl.style.display = 'block';
+      errEl.textContent = '⚠ Please enter all 4 player names for doubles.';
+      return false;
+    }
+    document.getElementById('h-cs-t1-players').value = t1p1 + '\n' + t1p2;
+    document.getElementById('h-cs-t2-players').value = t2p1 + '\n' + t2p2;
+  }
+  return true;
+}
+</script>
+
+{% else %}
+<!-- ══ LIVE MATCH ══ -->
+<div class="cs-wrap">
+
+{% if state.status == 'completed' %}
+<div class="cs-result-banner">
+  <h2>🏆 Match Complete!</h2>
+  <p>{{ state.result }}</p>
+</div>
+{% endif %}
+
+<!-- Board tally -->
+<div class="cs-boards">
+  <div class="cs-team t1">
+    <div class="cs-team-name">{{ state.team1 }}</div>
+    <div class="cs-team-players">{{ state.team1_players or '' }}</div>
+    <div class="cs-boards-big" id="t1Boards">{{ state.team1_boards }}</div>
+    <div class="cs-boards-label">boards won</div>
+  </div>
+  <div class="cs-sep">
+    <span>vs</span>
+    <span style="font-size:9px;">Best of {{ state.total_boards }}</span>
+    <span style="font-size:9px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">{{ state.match_type or 'singles' }}</span>
+  </div>
+  <div class="cs-team t2">
+    <div class="cs-team-name">{{ state.team2 }}</div>
+    <div class="cs-team-players">{{ state.team2_players or '' }}</div>
+    <div class="cs-boards-big" id="t2Boards">{{ state.team2_boards }}</div>
+    <div class="cs-boards-label">boards won</div>
+  </div>
+</div>
+
+<!-- Board chips -->
+<div class="cs-board-chips" id="cs-chips">
+{% for b in state.boards %}
+<div class="cs-chip {% if b.status == 'active' %}active{% elif b.winner == state.team1 %}t1{% else %}t2{% endif %}">
+  B{{ b.board_no }}{% if b.status == 'active' %} ●{% elif b.winner %}: {{ b.winner }}{% endif %}
+</div>
+{% endfor %}
+</div>
+
+<!-- Current board card -->
+{% if state.current_board_obj %}{% set cb = state.current_board_obj %}
+<div class="cs-board-card">
+  <div class="cs-board-card-header">
+    <span class="cs-board-title">Board {{ cb.board_no }}</span>
+    {% if state.status != 'completed' %}<span class="cs-board-live">● LIVE</span>{% endif %}
+  </div>
+  <div class="cs-score-row">
+    <div class="cs-score-team">
+      <div class="cs-score-name">{{ state.team1 }}</div>
+      <div class="cs-score-pts" id="t1Score" style="color:#34d399;">{{ cb.team1_score }}</div>
+      <div class="cs-score-to25" id="t1Need">{% if cb.team1_score < 25 %}{{ 25 - cb.team1_score }} to go{% else %}✓{% endif %}</div>
+    </div>
+    <div class="cs-score-dash">—</div>
+    <div class="cs-score-team">
+      <div class="cs-score-name">{{ state.team2 }}</div>
+      <div class="cs-score-pts" id="t2Score" style="color:#fbbf24;">{{ cb.team2_score }}</div>
+      <div class="cs-score-to25" id="t2Need">{% if cb.team2_score < 25 %}{{ 25 - cb.team2_score }} to go{% else %}✓{% endif %}</div>
+    </div>
+  </div>
+  <div class="cs-progress-wrap">
+    <div>
+      <div class="cs-progress-label"><span>{{ state.team1 }}</span><span id="t1Pct">{{ [(cb.team1_score/25*100)|int, 100]|min }}%</span></div>
+      <div class="cs-progress-track"><div class="cs-progress-fill" id="bar1" style="width:{{ [(cb.team1_score/25*100)|int,100]|min }}%;background:linear-gradient(90deg,#10b981,#34d399);"></div></div>
+    </div>
+    <div>
+      <div class="cs-progress-label"><span>{{ state.team2 }}</span><span id="t2Pct">{{ [(cb.team2_score/25*100)|int, 100]|min }}%</span></div>
+      <div class="cs-progress-track"><div class="cs-progress-fill" id="bar2" style="width:{{ [(cb.team2_score/25*100)|int,100]|min }}%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if state.status != 'completed' %}
+<!-- Two-team scoring panels -->
+<div class="cs-teams-grid">
+  <div class="cs-team-panel t1">
+    <div class="cs-team-panel-name">{{ state.team1 }}</div>
+    <div class="cs-action-grid">
+      <button class="cs-action ca-piece"   onclick="score('{{ state.team1 }}','piece',1)">  <span class="cs-emoji">⚫</span>Piece  <span class="cs-pts">+1 pt</span></button>
+      <button class="cs-action {% if cb.queen_pocketed %}ca-queen-done{% else %}ca-queen{% endif %}"
+              id="queen-btn-t1"
+              onclick="{% if not cb.queen_pocketed %}score('{{ state.team1 }}','queen',5){% endif %}"
+              {% if cb.queen_pocketed %}disabled title="Queen already pocketed this board"{% endif %}>
+        <span class="cs-emoji">👑</span>Queen
+        <span class="cs-pts">{% if cb.queen_pocketed %}✓ Done{% else %}+5 pts{% endif %}</span>
+      </button>
+      <button class="cs-action ca-penalty" onclick="score('{{ state.team1 }}','penalty',1)"><span class="cs-emoji">⚠️</span>Penalty<span class="cs-pts">opp +1</span></button>
+      <button class="cs-action ca-due"     onclick="score('{{ state.team1 }}','due',1)">    <span class="cs-emoji">📌</span>Due    <span class="cs-pts">+1 pt</span></button>
+    </div>
+  </div>
+  <div class="cs-team-panel t2">
+    <div class="cs-team-panel-name">{{ state.team2 }}</div>
+    <div class="cs-action-grid">
+      <button class="cs-action ca-piece"   onclick="score('{{ state.team2 }}','piece',1)">  <span class="cs-emoji">⚫</span>Piece  <span class="cs-pts">+1 pt</span></button>
+      <button class="cs-action {% if cb.queen_pocketed %}ca-queen-done{% else %}ca-queen{% endif %}"
+              id="queen-btn-t2"
+              onclick="{% if not cb.queen_pocketed %}score('{{ state.team2 }}','queen',5){% endif %}"
+              {% if cb.queen_pocketed %}disabled title="Queen already pocketed this board"{% endif %}>
+        <span class="cs-emoji">👑</span>Queen
+        <span class="cs-pts">{% if cb.queen_pocketed %}✓ Done{% else %}+5 pts{% endif %}</span>
+      </button>
+      <button class="cs-action ca-penalty" onclick="score('{{ state.team2 }}','penalty',1)"><span class="cs-emoji">⚠️</span>Penalty<span class="cs-pts">opp +1</span></button>
+      <button class="cs-action ca-due"     onclick="score('{{ state.team2 }}','due',1)">    <span class="cs-emoji">📌</span>Due    <span class="cs-pts">+1 pt</span></button>
+    </div>
+  </div>
+</div>
+<!-- Controls -->
+<div class="cs-controls">
+  <button class="cs-undo-btn"      onclick="undoLast()">↩ Undo Last</button>
+  <button class="cs-end-board-btn" onclick="endBoard()">🏁 End Board</button>
+</div>
+<button class="cs-end-match-btn" onclick="endMatch()">⛳ End Full Match</button>
+{% endif %}
+
+<!-- Event log -->
+<div class="cs-log">
+  <div class="cs-log-title">
+    <span>Action Log</span>
+    <span id="log-count" style="color:var(--accent);font-weight:900;">{{ state.events|length }} actions</span>
+  </div>
+  <div id="cs-log-items">
+  {% for ev in state.events %}
+  {% set is_t1 = ev.team == state.team1 %}
+  <div class="cs-log-item">
+    <div class="cs-log-badge" style="background:{% if ev.event_type=='penalty' %}rgba(239,68,68,.2){% elif ev.event_type=='queen' %}rgba(245,158,11,.2){% else %}rgba(0,200,150,.2){% endif %};">{% if ev.event_type=='piece' %}⚫{% elif ev.event_type=='queen' %}👑{% elif ev.event_type=='penalty' %}⚠️{% else %}📌{% endif %}</div>
+    <div style="flex:1;"><span style="font-weight:700;color:{% if is_t1 %}#34d399{% else %}#fbbf24{% endif %};">{{ ev.team }}</span> <span style="color:var(--muted);">· {{ ev.event_type|title }}</span></div>
+    <div style="font-weight:800;color:{% if ev.event_type=='penalty' %}#f87171{% else %}#10b981{% endif %};">{% if ev.event_type=='penalty' %}opp +{{ ev.points }}{% else %}+{{ ev.points }}{% endif %}</div>
+  </div>
+  {% endfor %}
+  </div>
+</div>
+
+</div><!-- /cs-wrap -->
+<div id="cs-toast"></div>
+
+<script>
+const EID = {{ event.id }};
+const T1  = {{ state.team1 | tojson }};
+const T2  = {{ state.team2 | tojson }};
+let _busy = false;
+
+function toast(msg, bg) {
+  const t = document.getElementById('cs-toast');
+  t.textContent = msg; t.style.background = bg || '#1e293b';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2300);
+}
+
+function setScoreUI(s) {
+  const cb = s.current_board_obj; if (!cb) return;
+  document.getElementById('t1Score').textContent = cb.team1_score;
+  document.getElementById('t2Score').textContent = cb.team2_score;
+  document.getElementById('t1Need').textContent  = cb.team1_score < 25 ? (25 - cb.team1_score) + ' to go' : '✓';
+  document.getElementById('t2Need').textContent  = cb.team2_score < 25 ? (25 - cb.team2_score) + ' to go' : '✓';
+  const p1 = Math.min(100, Math.round(cb.team1_score / 25 * 100));
+  const p2 = Math.min(100, Math.round(cb.team2_score / 25 * 100));
+  document.getElementById('bar1').style.width = p1 + '%';
+  document.getElementById('bar2').style.width = p2 + '%';
+  document.getElementById('t1Pct').textContent = p1 + '%';
+  document.getElementById('t2Pct').textContent = p2 + '%';
+  document.getElementById('t1Boards').textContent = s.team1_boards;
+  document.getElementById('t2Boards').textContent = s.team2_boards;
+
+  // Update queen buttons based on whether queen has been pocketed this board
+  ['queen-btn-t1', 'queen-btn-t2'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (cb.queen_pocketed) {
+      btn.className = btn.className.replace('ca-queen', 'ca-queen-done');
+      btn.disabled = true;
+      btn.onclick = null;
+      btn.title = 'Queen already pocketed this board';
+      btn.querySelector('.cs-pts').textContent = '✓ Done';
+    } else {
+      btn.className = btn.className.replace('ca-queen-done', 'ca-queen');
+      btn.disabled = false;
+      btn.title = '';
+      btn.querySelector('.cs-pts').textContent = '+5 pts';
+      // Re-wire onclick based on which team the button belongs to
+      const teamName = id === 'queen-btn-t1' ? T1 : T2;
+      btn.onclick = () => score(teamName, 'queen', 5);
+    }
+  });
+}
+
+function rebuildLog(events) {
+  const el = document.getElementById('cs-log-items'); if (!el) return;
+  document.getElementById('log-count').textContent = events.length + ' actions';
+  const emoji = {piece:'⚫', queen:'👑', penalty:'⚠️', due:'📌'};
+  el.innerHTML = events.slice().reverse().map(ev => {
+    const isT1 = ev.team === T1;
+    const tc = isT1 ? '#34d399' : '#fbbf24';
+    const bg = ev.event_type === 'penalty' ? 'rgba(239,68,68,.2)' : ev.event_type === 'queen' ? 'rgba(245,158,11,.2)' : 'rgba(0,200,150,.2)';
+    const pts = ev.event_type === 'penalty' ? `opp +${ev.points}` : `+${ev.points}`;
+    const pc  = ev.event_type === 'penalty' ? '#f87171' : '#10b981';
+    return `<div class="cs-log-item">
+      <div class="cs-log-badge" style="background:${bg};">${emoji[ev.event_type]||'🎯'}</div>
+      <div style="flex:1;"><span style="font-weight:700;color:${tc};">${ev.team}</span> <span style="color:var(--muted);">· ${ev.event_type[0].toUpperCase()+ev.event_type.slice(1)}</span></div>
+      <div style="font-weight:800;color:${pc};">${pts}</div>
+    </div>`;
+  }).join('');
+}
+
+async function score(team, type, pts) {
+  if (_busy) return; _busy = true;
+  const r = await fetch(`/api/carrom/${EID}/score`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({team, event_type:type, points:pts})
+  });
+  const d = await r.json(); _busy = false;
+  if (!d.success) { toast('⚠ ' + (d.error||'Error'), '#7f1d1d'); return; }
+  setScoreUI(d.state); rebuildLog(d.state.events||[]);
+  const lbl = {piece:'Piece +1', queen:'Queen +5', penalty:'Penalty (opp +1)', due:'Due +1'};
+  const bg  = type==='penalty'?'#7f1d1d':type==='queen'?'#78350f':'#064e3b';
+  toast(`${team}: ${lbl[type]||type}`, bg);
+  if (d.match_over)  { setTimeout(() => { toast('🏆 '+d.match_result,'#064e3b'); location.reload(); }, 900); }
+  else if (d.board_over) { setTimeout(() => { toast(`🏁 Board → ${d.board_winner}`,'#1e3a5f'); location.reload(); }, 900); }
+}
+
+async function undoLast() {
+  if (_busy) return; _busy = true;
+  const r = await fetch(`/api/carrom/${EID}/undo`, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const d = await r.json(); _busy = false;
+  if (!d.success) { toast('⚠ '+(d.error||'Nothing to undo'), '#7f1d1d'); return; }
+  setScoreUI(d.state); rebuildLog(d.state.events||[]);
+  toast('↩ Undone: ' + d.undone, '#1e293b');
+}
+
+async function endBoard() {
+  if (!confirm('End this board now? Winner is team with more points.')) return;
+  if (_busy) return; _busy = true;
+  const r = await fetch(`/api/carrom/${EID}/end-board`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const d = await r.json(); _busy = false;
+  if (!d.success) { toast('⚠ '+(d.error||'Error'),'#7f1d1d'); return; }
+  toast(`🏁 Board → ${d.board_winner}`, '#1e3a5f');
+  setTimeout(() => { if(d.match_over) toast('🏆 '+d.match_result,'#064e3b'); location.reload(); }, 900);
+}
+
+async function endMatch() {
+  if (!confirm('End the full match with current board scores?')) return;
+  if (_busy) return; _busy = true;
+  const r = await fetch(`/api/carrom/${EID}/end-match`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const d = await r.json(); _busy = false;
+  if (d.success) { toast('🏆 '+d.result,'#064e3b'); setTimeout(()=>location.reload(),900); }
+  else toast('⚠ '+(d.error||'Error'),'#7f1d1d');
+}
+</script>
+{% endif %}
+{% endblock %}

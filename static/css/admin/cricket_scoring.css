@@ -1,0 +1,146 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Cricket Scoring Page
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Partnership bar ── */
+.partnership-bar {
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 8px; padding: 8px 12px; margin: 0 0 6px;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.partnership-label { font-size:11px; color:#6ee7b7; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+.partnership-value  { font-size:15px; font-weight:800; color:#10b981; }
+.partnership-detail { font-size:11px; color:#6ee7b7; }
+
+/* ── Ball-by-ball feed ── */
+.bbb-feed {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 6px;
+  max-height: 90px; overflow-y: auto;
+}
+.bbb-entry { font-size:12px; color:var(--muted); padding:2px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+.bbb-entry:last-child { border-bottom:none; color:#e2e8f0; }
+.bbb-row   { display: flex; align-items: center; }
+.bbb-entry .bbb-ball {
+  display:inline-block; width:22px; height:22px; border-radius:50%;
+  text-align:center; line-height:22px; font-size:11px; font-weight:800; margin-right:6px; flex-shrink:0;
+}
+.bbb-entry .b-W  { background:#ef4444; color:#fff; }
+.bbb-entry .b-4  { background:var(--accent); color:#fff; }
+.bbb-entry .b-6  { background:#f59e0b; color:#000; }
+.bbb-entry .b-Wd, .bbb-entry .b-Nb { background:#f59e0b; color:#111; }
+.bbb-entry .b-0  { background:rgba(255,255,255,.1); color:#aaa; }
+.bbb-entry .b-default { background:rgba(255,255,255,.15); color:#e2e8f0; }
+
+/* ── Analytics panel ── */
+.analytics-tabs { display:flex; gap:0; border-radius:8px; overflow:hidden; border:1px solid var(--border); margin-bottom:8px; }
+.analytics-tab  { flex:1; padding:7px 4px; font-size:12px; font-weight:700; border:none; cursor:pointer; background:var(--bg3); color:var(--muted); transition:.15s; }
+.analytics-tab.active { background:var(--accent); color:#fff; }
+.analytics-panel        { display: none; }
+.analytics-panel.active { display: block; }
+
+/* ── Wagon Wheel ── */
+#wagon-wheel-canvas { display:block; margin:0 auto; border-radius:50%; }
+.ww-legend { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+.ww-legend span { font-size:11px; display:flex; align-items:center; gap:4px; }
+.ww-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+/* ── NRR box ── */
+.nrr-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.nrr-card { background:rgba(96,165,250,.08); border:1px solid rgba(96,165,250,.2); border-radius:8px; padding:10px 12px; }
+.nrr-card-label { font-size:10px; color:#93c5fd; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+.nrr-card-val   { font-size:20px; font-weight:800; color:var(--accent2); margin-top:2px; }
+.nrr-card-sub   { font-size:11px; color:#93c5fd; margin-top:1px; }
+.nrr-card.red   .nrr-card-label { color:#fca5a5; }
+.nrr-card.red   .nrr-card-val   { color:#ef4444; }
+.nrr-card.red   .nrr-card-sub   { color:#fca5a5; }
+.nrr-card.green .nrr-card-label { color:#6ee7b7; }
+.nrr-card.green .nrr-card-val   { color:#10b981; }
+.nrr-card.green .nrr-card-sub   { color:#6ee7b7; }
+
+/* ── Strike-rate analysis ── */
+.sr-table    { width:100%; font-size:12px; border-collapse:collapse; }
+.sr-table th { color:var(--muted); font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.5px; padding:4px 6px; text-align:left; }
+.sr-table td { padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.05); }
+.sr-bar  { height:6px; border-radius:3px; background:rgba(96,165,250,.2); margin-top:3px; }
+.sr-fill { height:6px; border-radius:3px; background:var(--accent); transition:width .4s; }
+
+/* ── Role badges ── */
+.role-badge { display:inline-block; font-size:9px; font-weight:800; border-radius:4px; padding:1px 4px; margin-left:4px; vertical-align:middle; }
+.badge-c  { background:#fbbf24; color:#111; }
+.badge-vc { background:#f59e0b; color:#111; }
+.badge-wk { background:#10b981; color:#fff; }
+
+/* ── Captain / WK assignment buttons ── */
+.special-role-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.special-role-btn {
+  padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.15);
+  background:var(--bg3); color:var(--text); cursor:pointer; font-size:12px;
+  font-weight:600; transition:.15s;
+}
+.special-role-btn.selected-c  { background:#fbbf24; border-color:#f59e0b; color:#111; }
+.special-role-btn.selected-wk { background:#10b981; border-color:#34d399; color:#fff; }
+.special-role-btn.selected-vc { background:#f59e0b; border-color:#d97706; color:#111; }
+
+/* ── Live ticker ── */
+#live-ticker {
+  background:var(--bg2); border-bottom:1px solid rgba(96,165,250,.3);
+  padding:6px 14px; font-size:12px; color:var(--accent2);
+  overflow:hidden; white-space:nowrap;
+}
+.ticker-inner { display:inline-block; animation:tickerScroll 20s linear infinite; }
+@keyframes tickerScroll { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
+.ticker-dot {
+  display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:#10b981; margin:0 8px; vertical-align:middle;
+  animation:ticker-pulse 1s infinite;
+}
+@keyframes ticker-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Economy bar ── */
+.eco-bar-container { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.eco-label  { min-width:80px; font-size:11px; color:var(--text); }
+.eco-track  { flex:1; height:8px; border-radius:4px; background:rgba(255,255,255,.08); }
+.eco-fill   { height:8px; border-radius:4px; transition:width .4s; }
+.eco-fill.eco-good { background:#10b981; }
+.eco-fill.eco-avg  { background:#f59e0b; }
+.eco-fill.eco-bad  { background:#ef4444; }
+.eco-val { min-width:36px; font-size:11px; font-weight:700; color:var(--text); text-align:right; }
+
+.analytics-section-title {
+  font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.5px; margin:10px 0 6px;
+}
+
+/* ── Extra / Wicket type buttons ── */
+.extra-type-btn {
+  padding:8px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);
+  background:var(--bg3); color:var(--text); cursor:pointer; font-size:13px; font-weight:600;
+}
+.extra-type-btn.active { background:var(--accent); border-color:var(--accent2); color:#fff; }
+.wkt-type-btn {
+  padding:8px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);
+  background:var(--bg3); color:var(--text); cursor:pointer; font-size:13px; font-weight:600;
+}
+.wkt-type-btn.active { background:#ef4444; border-color:#f87171; color:#fff; }
+
+/* ── Player row (setup) ── */
+.player-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.player-row .row-num {
+  min-width:26px; height:26px; display:flex; align-items:center;
+  justify-content:center; border-radius:6px; font-size:11px; font-weight:800; flex-shrink:0;
+}
+.player-row .row-num.main-num { color:#93c5fd; background:rgba(96,165,250,0.12); }
+.player-row .row-num.sub-num  { color:#fbbf24; background:rgba(251,191,36,0.12); }
+.player-row input[type="text"] {
+  flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg3); color:var(--text); font-size:13px; outline:none;
+  transition:border 0.2s; min-width:0;
+}
+.player-row input[type="text"]:focus { border-color:var(--accent2); background:rgba(96,165,250,0.06); }
+.player-row select {
+  padding:8px 8px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg3); color:var(--text); font-size:12px; outline:none;
+  width:130px; flex-shrink:0; cursor:pointer;
+}
+.player-row select:focus { border-color:var(--accent2); }

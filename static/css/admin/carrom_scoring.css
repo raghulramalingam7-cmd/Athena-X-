@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Carrom Scoring Page
+   ═══════════════════════════════════════════════════════ */
+
+.carrom-setup { background:var(--card); border-radius:12px; padding:24px; max-width:520px; margin:0 auto; }
+
+.carrom-scoreboard { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; background:var(--card); border-radius:14px; overflow:hidden; margin-bottom:20px; }
+.carrom-team      { padding:20px; text-align:center; }
+.carrom-team.t1   { background:linear-gradient(135deg, rgba(16,185,129,.12), transparent); }
+.carrom-team.t2   { background:linear-gradient(135deg, transparent, rgba(245,158,11,.12)); }
+.carrom-team-name { font-size:15px; font-weight:700; color:var(--text); }
+.carrom-boards    { font-size:42px; font-weight:900; color:var(--accent); }
+.carrom-vs-sep    { font-size:12px; color:var(--muted); padding:12px; text-align:center; }
+
+.board-info   { background:var(--card); border-radius:10px; padding:16px 20px; margin-bottom:20px; }
+.board-scores { display:flex; align-items:center; justify-content:center; gap:20px; font-size:22px; font-weight:700; }
+.board-target { font-size:12px; color:var(--muted); text-align:center; margin-top:8px; }
+.score-progress { background:var(--bg3); border-radius:8px; overflow:hidden; height:8px; margin-top:8px; }
+.score-bar      { height:100%; transition:.3s; }
+
+.piece-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px; }
+.piece-btn  { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; cursor:pointer; text-align:center; transition:.15s; }
+.piece-btn:hover  { border-color:var(--accent); }
+.piece-btn .emoji { font-size:24px; display:block; margin-bottom:6px; }
+.piece-btn .label { font-size:12px; color:var(--muted); }
+.piece-btn .pts   { font-size:18px; font-weight:800; color:var(--text); }
+
+.team-actions  { display:flex; flex-direction:column; gap:12px; margin-bottom:20px; }
+.team-panel    { background:var(--card); border-radius:10px; padding:16px; }
+.team-panel-title { font-size:13px; font-weight:700; color:var(--muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; }
+.action-btns  { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.action-btn   { padding:10px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:600; transition:.15s; }
+.btn-piece    { background:rgba(0,200,150,.15);   color:#00ffb2; }
+.btn-queen    { background:rgba(245,158,11,.15);   color:#fbbf24; }
+.btn-penalty  { background:rgba(239,68,68,.1);     color:#f87171; }
+.btn-due      { background:rgba(16,185,129,.1);    color:#4ade80; }
+.action-btn:hover { opacity:.8; }
+
+.event-log        { background:var(--card); border-radius:10px; padding:16px; margin-bottom:20px; max-height:200px; overflow-y:auto; }
+.event-log-title  { font-size:13px; font-weight:700; color:var(--muted); margin-bottom:10px; text-transform:uppercase; }
+.log-item         { font-size:12px; padding:6px 0; border-bottom:1px solid var(--border); color:var(--muted2); }
+.log-item:last-child { border:none; }
+
+.boards-history { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+.board-chip        { padding:6px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.board-chip.won-t1 { background:rgba(16,185,129,.2); color:#34d399; }
+.board-chip.won-t2 { background:rgba(245,158,11,.2);  color:#fbbf24; }
+.board-chip.active { background:rgba(0,200,150,.2);  color:#00ffb2; border:1px dashed var(--accent); }
+
+.match-over-banner    { background:linear-gradient(135deg,#10b981,#059669); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px; }
+.match-over-banner h2 { color:#fff; margin:0 0 6px; }
+.match-over-banner p  { color:rgba(255,255,255,.85); margin:0; }
+
+.end-board-btn { width:100%; padding:12px; background:rgba(245,158,11,.15); border:1px solid #f59e0b; border-radius:8px; color:#fbbf24; font-weight:700; cursor:pointer; margin-bottom:10px; }
+.end-board-btn:hover { background:rgba(245,158,11,.25); }
+.end-match-btn { width:100%; padding:12px; background:rgba(239,68,68,.1); border:1px solid #ef4444; border-radius:8px; color:#f87171; font-weight:700; cursor:pointer; }
+.end-match-btn:hover { background:rgba(239,68,68,.2); }

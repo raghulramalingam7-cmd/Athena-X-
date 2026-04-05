@@ -1,0 +1,31 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Admin Login & Signup Pages
+   ═══════════════════════════════════════════════════════ */
+
+.admin-login-page {
+  display:flex; justify-content:center; align-items:center;
+  min-height:100vh; padding:20px; background:var(--bg);
+}
+.admin-login-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:18px; padding:40px; width:100%; max-width:380px;
+  text-align:center; box-shadow:var(--shadow-lg);
+}
+.admin-login-card h1 { font-family:var(--font-num); font-size:28px; font-weight:900; color:var(--text); margin-bottom:5px; }
+.admin-login-card p  { color:var(--muted2); font-size:14px; margin-bottom:24px; }
+
+.admin-flash { margin:0 0 18px; border-radius:var(--radius-sm); padding:13px 18px; font-size:14px; }
+.flash-error   { background:rgba(234,67,53,0.08); color:var(--red);   border-left:3px solid var(--red); }
+.flash-success { background:rgba(52,168,83,0.08);  color:var(--green); border-left:3px solid var(--green); }
+
+.form-group { margin-bottom:16px; text-align:left; }
+.form-group label { display:block; font-size:13px; font-weight:600; color:var(--text2); margin-bottom:7px; }
+.form-group input {
+  width:100%; background:var(--input-bg); border:1.5px solid var(--border2);
+  border-radius:var(--radius-sm); color:var(--text); padding:10px 14px;
+  font-size:14px; outline:none; transition:var(--tr);
+}
+.form-group input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,200,150,0.1); }
+
+.btn-primary { background:var(--accent); color:#fff; width:100%; justify-content:center; padding:12px; font-size:15px; font-weight:700; border-radius:var(--radius-sm); border:none; cursor:pointer; transition:var(--tr); }
+.btn-primary:hover { background:var(--accent-h); transform:translateY(-1px); }

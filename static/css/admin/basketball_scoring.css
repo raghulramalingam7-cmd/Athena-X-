@@ -1,0 +1,42 @@
+/* ═══════════════════════════════════════════════════════
+   ATHENA-X · Basketball Scoring Page
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Points buttons ── */
+.pts-btn { flex:1; padding:10px 6px; background:var(--bg3); border:2px solid var(--border); border-radius:8px; color:var(--text); cursor:pointer; font-weight:900; font-size:16px; text-align:center; transition:all 0.15s; }
+.pts-btn:hover { border-color:var(--accent); background:rgba(96,165,250,0.1); }
+.pts-btn.three { border-color:rgba(251,191,36,0.4); color:#fbbf24; }
+.pts-btn.three:hover { background:rgba(251,191,36,0.1); }
+
+/* ── Special play buttons ── */
+.special-btn { flex:1; padding:8px 4px; border:1px solid var(--border); border-radius:8px; color:var(--text); cursor:pointer; font-weight:700; font-size:13px; text-align:center; transition:all 0.15s; }
+.special-btn.and1      { background:rgba(0,200,150,0.15);  border-color:rgba(0,200,150,0.4);  color:#00ffb2; }
+.special-btn.and1:hover { background:rgba(0,200,150,0.25); }
+.special-btn.and1-3     { background:rgba(0,200,150,0.15); border-color:rgba(0,200,150,0.4);  color:#00c896; }
+.special-btn.and1-3:hover { background:rgba(0,200,150,0.25); }
+.special-btn.goaltend   { background:rgba(14,165,233,0.15); border-color:rgba(14,165,233,0.4);  color:#38bdf8; }
+.special-btn.goaltend:hover { background:rgba(14,165,233,0.25); }
+.special-btn.owngoal    { background:rgba(239,68,68,0.12);  border-color:rgba(239,68,68,0.3);   color:#f87171; }
+.special-btn.owngoal:hover  { background:rgba(239,68,68,0.2); }
+
+/* ── Player select buttons ── */
+.psel-btn { padding:5px 10px; border-radius:7px; border:1px solid var(--border); background:var(--bg3); color:var(--text); cursor:pointer; font-size:12px; font-weight:600; transition:all 0.1s; }
+.psel-btn.fouled-out { opacity:0.45; cursor:not-allowed; border-color:#ef4444; }
+.psel-btn.ejected    { opacity:0.35; cursor:not-allowed; border-color:#ef4444; }
+.psel-btn.foul-warning { border-color:#f59e0b; color:#f59e0b; }
+
+/* ── Bonus badges ── */
+.bonus-badge        { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.4); }
+.bonus-badge.double { background:rgba(239,68,68,0.15); color:#f87171; border-color:rgba(239,68,68,0.4); }
+
+/* ── Shot clock ── */
+.shot-clock-btn { padding:6px 14px; border-radius:8px; border:1px solid rgba(14,165,233,0.3); background:rgba(14,165,233,0.08); color:#38bdf8; cursor:pointer; font-size:12px; font-weight:700; transition:all 0.1s; }
+.shot-clock-btn:hover { background:rgba(14,165,233,0.15); }
+
+/* ── Foul type selector ── */
+.foul-type-radio { display:block; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg3); cursor:pointer; font-size:13px; font-weight:600; margin-bottom:0; transition:all 0.1s; }
+.foul-type-radio.active { border-color:#f59e0b; background:rgba(245,158,11,0.12); color:#f59e0b; }
+
+/* ── Point modal buttons ── */
+.pts-modal-btn { flex:1; padding:10px; border-radius:8px; border:2px solid var(--border); background:var(--bg3); color:var(--text); cursor:pointer; font-weight:700; font-size:16px; }
+.pts-modal-btn.active { border-color:var(--accent); background:rgba(96,165,250,0.1); }

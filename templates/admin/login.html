@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Admin Login — Athena-X</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script>(function(){var t=localStorage.getItem('athena-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;background:#080c14;font-family:var(--font-main,sans-serif);}
+    .page{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+
+    /* ── LEFT PANEL — dark command-center ── */
+    .left{
+      background:linear-gradient(155deg,#0a0e1a 0%,#130a1e 50%,#1a0a2e 100%);
+      position:relative;overflow:hidden;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:60px 48px;
+
+      
+    }
+    /* grid lines */
+    .left::before{
+      content:'';position:absolute;inset:0;
+      background-image:linear-gradient(rgba(147,51,234,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(147,51,234,0.06) 1px,transparent 1px);
+      background-size:40px 40px;
+    }
+    .left::after{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse 70% 60% at 40% 45%,rgba(147,51,234,0.15) 0%,transparent 65%);
+    }
+    /* glowing orb */
+    .orb{
+      position:absolute;width:280px;height:280px;border-radius:50%;
+      background:radial-gradient(circle,rgba(220,38,38,0.18) 0%,transparent 70%);
+      top:50%;left:50%;transform:translate(-50%,-50%);
+      animation:orb-pulse 4s ease-in-out infinite;
+    }
+    @keyframes orb-pulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.6;}50%{transform:translate(-50%,-50%) scale(1.2);opacity:1;}}
+    .left-inner{position:relative;z-index:1;text-align:center;max-width:360px;}
+    .shield-icon{font-size:86px;display:block;margin-bottom:18px;filter:drop-shadow(0 0 32px rgba(220,38,38,0.5));}
+    .admin-title{font-size:38px;font-weight:900;color:#f8fafc;letter-spacing:-1px;margin-bottom:6px;}
+    .admin-title span{background:linear-gradient(135deg,#dc2626,#9333ea);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .admin-sub{font-size:15px;color:rgba(255,255,255,0.55);line-height:1.6;margin-bottom:36px;}
+
+    /* restricted badge */
+    .restricted{display:inline-flex;align-items:center;gap:7px;background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.35);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:28px;}
+
+    .priv-list{display:flex;flex-direction:column;gap:10px;width:100%;}
+    .priv{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 16px;}
+    .priv-icon{font-size:20px;flex-shrink:0;}
+    .priv-text{font-size:13px;color:rgba(255,255,255,0.75);font-weight:600;text-align:left;}
+
+    /* ── RIGHT PANEL — form ── */
+    .right{
+      background:#0d111c;border-left:1px solid rgba(147,51,234,0.15);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:48px 56px;overflow-y:auto;
+    }
+    .form-box{width:100%;max-width:400px;}
+    .admin-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:24px;}
+    .form-heading{font-size:30px;font-weight:900;color:#f8fafc;margin-bottom:6px;}
+    .form-sub{font-size:14px;color:rgba(255,255,255,0.45);margin-bottom:32px;}
+    .flash-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:20px;}
+    .flash-success{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);color:#4ade80;border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:20px;}
+    .fgroup{margin-bottom:18px;}
+    .fgroup label{display:block;font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:7px;}
+    .iw{position:relative;}
+    .iw .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.5;pointer-events:none;}
+    .iw input{width:100%;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f8fafc;padding:12px 14px 12px 40px;font-size:14px;outline:none;transition:.15s;}
+    .iw input:focus{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12);}
+    .iw input::placeholder{color:rgba(255,255,255,0.25);}
+    .btn-admin{
+      width:100%;padding:14px;border:none;border-radius:10px;
+      background:linear-gradient(135deg,#dc2626,#9333ea);
+      color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;margin-top:6px;
+    }
+    .btn-admin:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(147,51,234,.3);}
+    .links-row{display:flex;flex-direction:column;gap:10px;margin-top:22px;padding-top:22px;border-top:1px solid rgba(255,255,255,0.07);}
+    .links-row a{display:flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.4);text-decoration:none;transition:.15s;}
+    .links-row a:hover{color:rgba(255,255,255,0.75);}
+    .create-admin-link{background:rgba(147,51,234,0.07);border:1px solid rgba(147,51,234,0.2);border-radius:10px;padding:12px 16px;flex-direction:column;align-items:center !important;text-align:center;gap:4px !important;}
+    .create-admin-link span.label{color:rgba(255,255,255,0.45) !important;font-size:12px !important;}
+    .create-admin-link span.action{color:#a855f7 !important;font-weight:700 !important;}
+    .user-link-box{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:11px 16px;}
+    .user-link-box a{color:#38bdf8 !important;font-weight:600 !important;}
+    @media(max-width:768px){.page{grid-template-columns:1fr;}.left{display:none;}.right{padding:32px 24px;background:#080c14;border-left:none;}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <!-- LEFT: BRANDING -->
+  <div class="left">
+    <div class="orb"></div>
+    <div class="left-inner">
+      <div class="restricted">🔒 Restricted Access</div>
+      <span class="shield-icon">🛡️</span>
+      <div class="admin-title">Athena<span>-X Admin</span></div>
+      <div class="admin-sub">Management portal for event scoring,<br>player tracking and system control.</div>
+      <div class="priv-list">
+        <div class="priv"><span class="priv-icon">📅</span><div class="priv-text">Create &amp; manage events</div></div>
+        <div class="priv"><span class="priv-icon">🏏</span><div class="priv-text">Live scoring across 8 sports</div></div>
+        <div class="priv"><span class="priv-icon">👥</span><div class="priv-text">User &amp; registration management</div></div>
+        <div class="priv"><span class="priv-icon">⚙️</span><div class="priv-text">Full system configuration</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: FORM -->
+  <div class="right">
+    <div class="form-box">
+      <a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.4);text-decoration:none;margin-bottom:18px;" onmouseover="this.style.color='#a855f7'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">← Back to Site</a>
+      <div class="admin-badge">🛡️ Admin Portal</div>
+      <div class="form-heading">Admin Sign In</div>
+      <div class="form-sub">Access is restricted to authorised administrators only</div>
+
+      {% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, msg in msgs %}<div class="flash-{{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}
+
+      <form method="POST" action="/admin/login">
+        <div class="fgroup">
+          <label>Admin Username</label>
+          <div class="iw"><span class="ic">🛡️</span><input type="text" name="username" required placeholder="Enter admin username" autofocus autocomplete="username"/></div>
+        </div>
+        <div class="fgroup">
+          <label>Password</label>
+          <div class="iw"><span class="ic">🔒</span><input type="password" name="password" required placeholder="Enter your password" autocomplete="current-password"/></div>
+        </div>
+        <button type="submit" class="btn-admin">Sign In to Admin Panel →</button>
+      </form>
+
+      <div class="links-row">
+        <a href="/admin/signup" class="create-admin-link">
+          <span class="label">Need an admin account?</span>
+          <span class="action">🔑 Create Admin Account →</span>
+        </a>
+        <div class="user-link-box">
+          <span style="font-size:13px;color:rgba(255,255,255,0.4);">Not an admin?</span>
+          <a href="/login">👁️ Go to Viewer Login →</a>
+        </div>
+        <a href="/" style="justify-content:center;">← Back to public site</a>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

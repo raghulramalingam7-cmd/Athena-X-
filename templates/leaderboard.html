@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Player Stats & Leaderboard — Athena-X{% endblock %}
+{% block content %}
+<div class="page-container">
+  <div class="page-header">
+    <div class="page-title-area">
+      <a href="/" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:6px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← Home</a>
+      <h1>🏅 Player Leaderboard</h1>
+      <p>Cricket batting &amp; bowling performance across all matches</p>
+    </div>
+    <a href="/matches" class="btn btn-secondary btn-sm">📋 All Matches</a>
+  </div>
+
+  <div class="admin-tabs">
+    <button class="atab active" onclick="switchTab('batting')">🏏 Top Batters</button>
+    <button class="atab"        onclick="switchTab('bowling')">⚾ Top Bowlers</button>
+  </div>
+
+  <!-- Batting -->
+  <div id="tab-batting" class="tab-panel active">
+    {% if top_scorers %}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:44px;text-align:center;">#</th>
+            <th>Player</th>
+            <th style="text-align:right;">Inn</th>
+            <th style="text-align:right;">Runs</th>
+            <th style="text-align:right;">Best</th>
+            <th style="text-align:right;">Balls</th>
+            <th style="text-align:right;">SR</th>
+            <th style="text-align:right;">4s</th>
+            <th style="text-align:right;">6s</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in top_scorers %}
+          {% set sr = ((p.total_runs / p.total_balls * 100) | round(1)) if p.total_balls > 0 else 0 %}
+          <tr>
+            <td style="text-align:center;">
+              <span class="ldb-rank {% if loop.index==1 %}gold{% elif loop.index==2 %}silver{% elif loop.index==3 %}bronze{% endif %}">
+                {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+              </span>
+            </td>
+            <td>
+              <div class="user-cell">
+                <div class="user-avatar-sm">{{ p.player_name[0].upper() }}</div>
+                <div>
+                  <div style="font-weight:700;">{{ p.player_name }}</div>
+                  <div class="td-muted">{{ p.innings }} inning{{ 's' if p.innings!=1 }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="td-right td-muted">{{ p.innings }}</td>
+            <td class="td-right" style="font-family:var(--font-num);font-size:16px;font-weight:900;color:var(--accent2);">{{ p.total_runs }}</td>
+            <td class="td-right td-strong">{{ p.best_score }}</td>
+            <td class="td-right td-muted">{{ p.total_balls }}</td>
+            <td class="td-right">
+              <span style="font-family:var(--font-num);font-weight:700;{% if sr >= 150 %}color:var(--green){% elif sr >= 100 %}color:var(--accent2){% else %}color:var(--muted2){% endif %}">{{ sr }}</span>
+            </td>
+            <td class="td-right" style="color:var(--accent2);font-weight:600;">{{ p.total_fours }}</td>
+            <td class="td-right" style="color:var(--purple);font-weight:600;">{{ p.total_sixes }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-state-icon">🏏</div><p>No batting stats yet. Start scoring matches!</p></div>
+    {% endif %}
+  </div>
+
+  <!-- Bowling -->
+  <div id="tab-bowling" class="tab-panel">
+    {% if top_bowlers %}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:44px;text-align:center;">#</th>
+            <th>Player</th>
+            <th style="text-align:right;">Inn</th>
+            <th style="text-align:right;">Wkts</th>
+            <th style="text-align:right;">Balls</th>
+            <th style="text-align:right;">Runs</th>
+            <th style="text-align:right;">Eco</th>
+            <th style="text-align:right;">Maidens</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in top_bowlers %}
+          {% set eco = ((p.total_runs / (p.total_balls / 6)) | round(2)) if p.total_balls > 0 else 0 %}
+          <tr>
+            <td style="text-align:center;">
+              <span class="ldb-rank {% if loop.index==1 %}gold{% elif loop.index==2 %}silver{% elif loop.index==3 %}bronze{% endif %}">
+                {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+              </span>
+            </td>
+            <td>
+              <div class="user-cell">
+                <div class="user-avatar-sm" style="background:linear-gradient(135deg,var(--red),var(--orange))">{{ p.player_name[0].upper() }}</div>
+                <div>
+                  <div style="font-weight:700;">{{ p.player_name }}</div>
+                  <div class="td-muted">{{ p.innings }} match{{ 'es' if p.innings!=1 }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="td-right td-muted">{{ p.innings }}</td>
+            <td class="td-right" style="font-family:var(--font-num);font-size:16px;font-weight:900;color:var(--red);">{{ p.total_wickets }}</td>
+            <td class="td-right td-muted">{{ p.total_balls }}</td>
+            <td class="td-right td-muted">{{ p.total_runs }}</td>
+            <td class="td-right">
+              <span style="font-family:var(--font-num);font-weight:700;{% if eco <= 6 %}color:var(--green){% elif eco <= 9 %}color:var(--yellow){% else %}color:var(--red){% endif %}">{{ eco }}</span>
+            </td>
+            <td class="td-right" style="color:var(--green);font-weight:600;">{{ p.total_maidens }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-state-icon">⚾</div><p>No bowling stats yet. Start scoring matches!</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function switchTab(id){
+  document.querySelectorAll('.atab').forEach(function(t,i){ t.classList.toggle('active', (i===0&&id==='batting')||(i===1&&id==='bowling')); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('tab-'+id).classList.add('active');
+}
+</script>
+{% endblock %}

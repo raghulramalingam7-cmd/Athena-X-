@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block title %}🎯 {{ event.team1 }} vs {{ event.team2 }} — Carrom{% endblock %}
+{% block content %}
+<style>
+:root{--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--purple:#8b5cf6;}
+.cv-wrap{max-width:540px;margin:0 auto;padding:16px 12px 40px;}
+
+/* ── Header ── */
+.cv-header{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:16px;padding:20px 18px;margin-bottom:16px;text-align:center;}
+.cv-sport-tag{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.cv-match-title{font-size:18px;font-weight:900;color:var(--text);margin-bottom:8px;}
+.cv-status-pill{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;margin-bottom:12px;}
+.cv-status-pill.live{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+.cv-status-pill.completed{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.25);}
+.cv-status-pill.upcoming{background:rgba(0,200,150,.1);color:#00ffb2;border:1px solid rgba(0,200,150,.25);}
+.cv-pulse{width:7px;height:7px;background:#ef4444;border-radius:50%;animation:cv-blink 1.2s infinite;}
+@keyframes cv-blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+
+/* ── Board tally ── */
+.cv-tally{display:grid;grid-template-columns:1fr 56px 1fr;align-items:stretch;background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;}
+.cv-t{padding:18px 10px;text-align:center;}
+.cv-t.t1{background:linear-gradient(135deg,rgba(16,185,129,.08),transparent);}
+.cv-t.t2{background:linear-gradient(135deg,transparent,rgba(245,158,11,.08));}
+.cv-t-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cv-t-players{font-size:10px;color:var(--muted);min-height:14px;margin-bottom:6px;}
+.cv-t-boards{font-size:46px;font-weight:900;line-height:1;}
+.cv-t.t1 .cv-t-boards{color:#34d399;}
+.cv-t.t2 .cv-t-boards{color:#fbbf24;}
+.cv-t-label{font-size:10px;color:var(--muted);margin-top:2px;}
+.cv-sep{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--muted);padding:6px 4px;border-left:1px solid var(--border);border-right:1px solid var(--border);gap:4px;}
+
+/* ── Board chips ── */
+.cv-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.cv-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid transparent;}
+.cv-chip.active{background:rgba(0,200,150,.12);color:#00ffb2;border-color:rgba(0,200,150,.35);border-style:dashed;}
+.cv-chip.t1{background:rgba(16,185,129,.12);color:#34d399;border-color:rgba(16,185,129,.3);}
+.cv-chip.t2{background:rgba(245,158,11,.12);color:#fbbf24;border-color:rgba(245,158,11,.3);}
+
+/* ── Current board card ── */
+.cv-board-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.cv-board-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cv-board-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.cv-live-dot{font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:#f87171;border-radius:20px;padding:3px 10px;animation:cv-blink 1.5s infinite;}
+.cv-score-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:14px;}
+.cv-s-team{text-align:center;}
+.cv-s-name{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.cv-s-pts{font-size:40px;font-weight:900;line-height:1;}
+.cv-s-pts.t1{color:#34d399;} .cv-s-pts.t2{color:#fbbf24;}
+.cv-s-need{font-size:10px;color:var(--muted);margin-top:3px;}
+.cv-s-dash{font-size:22px;color:var(--muted);}
+.cv-prog-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cv-prog-row{}
+.cv-prog-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;}
+.cv-prog-track{height:7px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.cv-prog-fill{height:100%;border-radius:4px;transition:width .5s;}
+
+/* ── Breakdown grid for past boards ── */
+.cv-boards-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+.cv-boards-table th{padding:6px 10px;text-align:center;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);}
+.cv-boards-table td{padding:7px 10px;text-align:center;border-bottom:1px solid var(--border);}
+.cv-boards-table tr:last-child td{border:none;}
+.cv-win-mark{font-weight:900;color:#34d399;}
+.cv-lose-mark{color:var(--muted);}
+
+/* ── Event log ── */
+.cv-log-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.cv-log-header{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.cv-log-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.cv-log-item:last-child{border:none;}
+.cv-log-badge{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+
+/* ── Refresh notice ── */
+.cv-refresh{text-align:center;font-size:11px;color:var(--muted);margin-top:12px;padding:10px;}
+
+/* ── Result banner ── */
+.cv-result{background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:18px;text-align:center;margin-bottom:14px;}
+.cv-result h2{color:#fff;margin:0 0 4px;font-size:17px;}
+.cv-result p{color:rgba(255,255,255,.85);margin:0;font-size:13px;}
+
+/* ── No match yet ── */
+.cv-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+</style>
+
+<div class="cv-wrap">
+
+  <!-- Back Button -->
+  <div style="margin-bottom:10px;">
+    <a href="/matches" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← All Matches</a>
+  </div>
+
+  <!-- Header -->
+  <div class="cv-header">
+    <div class="cv-sport-tag">{{ event.sport_icon }} {{ event.sport_name }}</div>
+    <div class="cv-match-title">{{ event.team1 }} vs {{ event.team2 }}</div>
+    <div>
+      {% if event.status == 'live' %}
+        <span class="cv-status-pill live"><span class="cv-pulse"></span> LIVE</span>
+      {% elif event.status == 'completed' %}
+        <span class="cv-status-pill completed">✅ Completed</span>
+      {% else %}
+        <span class="cv-status-pill upcoming">📅 Upcoming</span>
+      {% endif %}
+    </div>
+    {% if event.event_date %}<div style="font-size:12px;color:var(--muted);">📅 {{ event.event_date }}{% if event.event_time %} at {{ event.event_time }}{% endif %}{% if event.venue %} · 📍 {{ event.venue }}{% endif %}</div>{% endif %}
+  </div>
+
+  {% if not state %}
+  <div class="cv-empty">
+    <div style="font-size:36px;margin-bottom:10px;">🎯</div>
+    <div style="font-weight:700;color:var(--text);margin-bottom:6px;">Match not started yet</div>
+    <div>The admin will start the carrom match soon. Check back shortly.</div>
+  </div>
+
+  {% else %}
+
+  <!-- Result banner -->
+  {% if state.status == 'completed' and state.result %}
+  <div class="cv-result">
+    <h2>🏆 Match Complete!</h2>
+    <p>{{ state.result }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Board tally -->
+  <div class="cv-tally">
+    <div class="cv-t t1">
+      <div class="cv-t-name">{{ state.team1 }}</div>
+      <div class="cv-t-players">{{ state.team1_players or '' }}</div>
+      <div class="cv-t-boards">{{ state.team1_boards }}</div>
+      <div class="cv-t-label">boards won</div>
+    </div>
+    <div class="cv-sep">
+      <span>vs</span>
+      <span style="font-size:9px;">Best of {{ state.total_boards }}</span>
+    </div>
+    <div class="cv-t t2">
+      <div class="cv-t-name">{{ state.team2 }}</div>
+      <div class="cv-t-players">{{ state.team2_players or '' }}</div>
+      <div class="cv-t-boards">{{ state.team2_boards }}</div>
+      <div class="cv-t-label">boards won</div>
+    </div>
+  </div>
+
+  <!-- Board chips -->
+  {% if state.boards %}
+  <div class="cv-chips">
+    {% for b in state.boards %}
+    <div class="cv-chip {% if b.status == 'active' %}active{% elif b.winner == state.team1 %}t1{% else %}t2{% endif %}">
+      Board {{ b.board_no }}
+      {% if b.status == 'active' %} ● Live
+      {% elif b.winner %}: {{ b.winner }}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Current board live card -->
+  {% if state.current_board_obj %}{% set cb = state.current_board_obj %}
+  <div class="cv-board-card">
+    <div class="cv-board-header">
+      <span class="cv-board-label">Board {{ cb.board_no }} — Current Score</span>
+      {% if state.status == 'live' %}<span class="cv-live-dot">● LIVE</span>{% endif %}
+    </div>
+    <div class="cv-score-grid">
+      <div class="cv-s-team">
+        <div class="cv-s-name">{{ state.team1 }}</div>
+        <div class="cv-s-pts t1">{{ cb.team1_score }}</div>
+        <div class="cv-s-need">{% if cb.team1_score < 25 %}{{ 25 - cb.team1_score }} to win{% else %}✓{% endif %}</div>
+      </div>
+      <div class="cv-s-dash">—</div>
+      <div class="cv-s-team">
+        <div class="cv-s-name">{{ state.team2 }}</div>
+        <div class="cv-s-pts t2">{{ cb.team2_score }}</div>
+        <div class="cv-s-need">{% if cb.team2_score < 25 %}{{ 25 - cb.team2_score }} to win{% else %}✓{% endif %}</div>
+      </div>
+    </div>
+    <div class="cv-prog-wrap">
+      <div class="cv-prog-row">
+        <div class="cv-prog-lbl"><span>{{ state.team1 }}</span><span>{{ [(cb.team1_score/25*100)|int,100]|min }}%</span></div>
+        <div class="cv-prog-track"><div class="cv-prog-fill" style="width:{{ [(cb.team1_score/25*100)|int,100]|min }}%;background:linear-gradient(90deg,#10b981,#34d399);"></div></div>
+      </div>
+      <div class="cv-prog-row">
+        <div class="cv-prog-lbl"><span>{{ state.team2 }}</span><span>{{ [(cb.team2_score/25*100)|int,100]|min }}%</span></div>
+        <div class="cv-prog-track"><div class="cv-prog-fill" style="width:{{ [(cb.team2_score/25*100)|int,100]|min }}%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Completed boards breakdown -->
+  {% set done_boards = state.boards | selectattr('status','equalto','completed') | list %}
+  {% if done_boards %}
+  <div class="cv-board-card" style="margin-bottom:14px;">
+    <div class="cv-board-label" style="margin-bottom:10px;">📋 Board Results</div>
+    <table class="cv-boards-table">
+      <thead>
+        <tr>
+          <th>Board</th>
+          <th>{{ state.team1 }}</th>
+          <th>{{ state.team2 }}</th>
+          <th>Winner</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in done_boards %}
+        <tr>
+          <td style="color:var(--muted);">B{{ b.board_no }}</td>
+          <td class="{% if b.winner == state.team1 %}cv-win-mark{% else %}cv-lose-mark{% endif %}">{{ b.team1_score }}</td>
+          <td class="{% if b.winner == state.team2 %}cv-win-mark{% else %}cv-lose-mark{% endif %}">{{ b.team2_score }}</td>
+          <td style="font-weight:700;color:{% if b.winner == state.team1 %}#34d399{% else %}#fbbf24{% endif %};">{{ b.winner }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Recent action log (last 20) -->
+  {% if state.events %}
+  <div class="cv-log-wrap">
+    <div class="cv-log-header">Recent Actions ({{ state.events | length }})</div>
+    {% for ev in state.events[:20] %}
+    {% set is_t1 = ev.team == state.team1 %}
+    <div class="cv-log-item">
+      <div class="cv-log-badge" style="background:{% if ev.event_type=='penalty' %}rgba(239,68,68,.2){% elif ev.event_type=='queen' %}rgba(245,158,11,.2){% else %}rgba(0,200,150,.15){% endif %};">
+        {% if ev.event_type=='piece' %}⚫{% elif ev.event_type=='queen' %}👑{% elif ev.event_type=='penalty' %}⚠️{% else %}📌{% endif %}
+      </div>
+      <div style="flex:1;">
+        <span style="font-weight:700;color:{% if is_t1 %}#34d399{% else %}#fbbf24{% endif %};">{{ ev.team }}</span>
+        <span style="color:var(--muted);font-size:11px;"> · {{ ev.event_type | title }}</span>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:{% if ev.event_type=='penalty' %}#f87171{% else %}#10b981{% endif %};">
+        {% if ev.event_type == 'penalty' %}opp +{{ ev.points }}{% else %}+{{ ev.points }}{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Scoring legend -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--muted);line-height:1.8;margin-bottom:14px;">
+    <div style="font-weight:700;color:var(--text);margin-bottom:4px;">Scoring Guide</div>
+    ⚫ Piece = +1 pt &nbsp;·&nbsp; 👑 Queen = +5 pts &nbsp;·&nbsp; ⚠️ Penalty = opponent +1 pt &nbsp;·&nbsp; 📌 Due = +1 pt<br>
+    First to <strong style="color:var(--text);">25 points</strong> wins the board.
+  </div>
+
+  <!-- Share + auto-refresh -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+    <span style="color:var(--muted);font-size:12px;">🔗 Share:</span>
+    <span style="font-size:11px;color:var(--muted2);background:var(--bg3);border-radius:6px;padding:4px 8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ request.url }}</span>
+    <button onclick="navigator.clipboard.writeText(window.location.href);this.textContent='Copied!'" style="padding:5px 12px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;">Copy</button>
+  </div>
+
+  {% if event.status == 'live' %}
+  <div class="cv-refresh">🔄 Auto-refreshes in <span id="cv-countdown">30</span>s</div>
+  <script>
+    let _c = 30;
+    const _t = setInterval(() => {
+      _c--;
+      const el = document.getElementById('cv-countdown');
+      if (el) el.textContent = _c;
+      if (_c <= 0) { clearInterval(_t); location.reload(); }
+    }, 1000);
+  </script>
+  {% endif %}
+
+  {% endif %}{# end if state #}
+</div>{# cv-wrap #}
+{% endblock %}
