@@ -4723,4 +4723,4 @@ if __name__ == '__main__':
     print(f"  📱  Mobile access    : http://<your-ip>:{port}")
     print(f"  🔧  Debug mode       : {'ON' if debug_mode else 'OFF'}")
     print(f"{'='*55}\n")
-    app.run(debug=debug_mode, host='0.0.0.0', port=port)
+    app.run()
