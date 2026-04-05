@@ -6,7 +6,9 @@ from functools import wraps
 from datetime import timedelta
 
 app = Flask(__name__)
+import logging
 
+logging.basicConfig(level=logging.INFO)
 # ── SECURITY CONFIGURATION ────────────────────────────────────────────────────
 # Secret key: reads from environment variable or generates a stable one from a
 # machine-specific seed stored in a local file (never hardcoded).
